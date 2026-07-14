@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solar AC Control Panel</title>
+    <title>Solar DCS Control Hub</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,6 +14,7 @@
             --card-bg: #1e1e1e;
             --accent-green: #4caf50;
             --accent-blue: #2196f3;
+            --accent-orange: #ff9800;
             --text-main: #ffffff;
             --text-sub: #aaaaaa;
             --border-color: #333333;
@@ -22,17 +23,19 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 16px;
+            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 12px;
             display: flex; flex-direction: column; align-items: center;
+            -webkit-user-select: none; user-select: none;
         }
 
-        .container { width: 100%; max-width: 500px; display: none; }
+        .container { width: 100%; max-width: 540px; display: none; }
 
+        /* PASSCODE OVERLAY */
         #auth-screen {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-color);
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
         }
-        .pin-display { font-size: 2.5rem; letter-spacing: 10px; margin-bottom: 24px; height: 50px; }
+        .pin-display { font-size: 2.5rem; letter-spacing: 10px; margin-bottom: 24px; height: 50px; color: var(--accent-blue); }
         .keypad { display: grid; grid-template-columns: repeat(3, 80px); gap: 16px; }
         .key {
             width: 80px; height: 80px; background-color: var(--card-bg); border: 1px solid var(--border-color);
@@ -40,169 +43,291 @@
         }
         .key:active { background-color: #333; }
 
+        /* NAVIGATION TABS */
         .tab-bar {
-            display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 16px;
-            border: 1px solid var(--border-color); padding: 4px;
+            display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 12px;
+            border: 1px solid var(--border-color); padding: 4px; width: 100%;
         }
         .tab-btn {
-            flex: 1; background: transparent; color: var(--text-sub); border: none; padding: 12px;
-            font-size: 0.9rem; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s;
+            flex: 1; background: transparent; color: var(--text-sub); border: none; padding: 12px 4px;
+            font-size: 0.85rem; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s;
+            text-align: center;
         }
         .tab-btn.active { background: var(--accent-blue); color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
+        .tab-content { display: none; width: 100%; }
+        .tab-content.active { display: block; width: 100%; }
 
-        h1 { font-size: 1.4rem; margin: 0 0 4px 0; text-align: center; }
-        .timestamp-header { font-size: 0.8rem; color: var(--text-sub); text-align: center; margin-bottom: 16px; }
-        .card { background-color: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color); }
-        .card-title { font-size: 0.8rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px;}
+        /* HMI INDUSTRIAL ELEMENTS */
+        h1 { font-size: 1.3rem; margin: 4px 0; text-align: center; }
+        .timestamp-header { font-size: 0.75rem; color: var(--text-sub); text-align: center; margin-bottom: 12px; }
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border-color); position: relative; }
+        .card-title { font-size: 0.8rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
         
-        .metric-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .metric-value { font-size: 1.6rem; font-weight: bold; margin-top: 4px; }
-        .value-solar { color: #ffb74d; }
-        .value-battery { color: var(--accent-green); }
+        .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+        .metric-card { background: #181818; padding: 8px; border-radius: 6px; border: 1px solid #252525; }
+        .metric-label { font-size: 0.7rem; color: var(--text-sub); }
+        .metric-value { font-size: 1.25rem; font-weight: bold; margin-top: 4px; }
+        
+        .vector-tag { font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; margin-top: 8px; text-align: center; }
+        .vector-charging { background: rgba(76, 175, 80, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .vector-discharging { background: rgba(244, 67, 54, 0.15); color: var(--status-off); border: 1px solid var(--status-off); }
 
-        .io-rack { display: grid; grid-template-columns: 1fr; gap: 10px; }
-        .io-channel { display: flex; justify-content: space-between; align-items: center; background: #252525; padding: 10px 14px; border-radius: 8px; border-left: 4px solid var(--border-color); }
-        .io-channel.active { border-left-color: var(--accent-green); }
-        .io-channel.analog { border-left-color: var(--accent-blue); }
-        .io-tag { font-size: 0.75rem; color: var(--text-sub); font-family: monospace; }
-        .io-status { font-size: 0.9rem; font-weight: bold; }
-        .status-on { color: var(--accent-green); }
+        /* HIGH DENSITY MATRIX TABLE */
+        .matrix-w { width: 100%; overflow-x: auto; }
+        .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left; }
+        .matrix-table th { color: var(--text-sub); padding: 8px 4px; border-bottom: 1px solid var(--border-color); font-weight: 600; }
+        .matrix-table td { padding: 10px 4px; border-bottom: 1px solid #252525; white-space: nowrap; }
+        .badge { padding: 2px 5px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; }
+        .badge-on { background: rgba(76, 175, 80, 0.2); color: var(--accent-green); }
+        .badge-off { background: rgba(244, 67, 54, 0.2); color: var(--status-off); }
+        .badge-auto { background: rgba(33, 150, 243, 0.2); color: var(--accent-blue); }
+        .badge-hand { background: rgba(255, 152, 0, 0.2); color: var(--accent-orange); }
 
-        .btn-row { display: flex; gap: 12px; margin-top: 8px; }
-        button.action-btn { width:100%; background-color: var(--accent-blue); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
-        #btn-refresh { background-color: #333333; border: 1px solid var(--border-color); color: white; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer;}
+        /* CONTROLLER STEPPER FIELD SETS */
+        .step-container { display: flex; align-items: center; justify-content: space-between; background: #181818; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 10px; }
+        .step-label { font-size: 0.82rem; display: flex; align-items: center; gap: 6px; }
+        .step-controls { display: flex; align-items: center; gap: 4px; }
+        .btn-step { width: 36px; height: 36px; background: #2a2a2a; border: 1px solid #444; color: white; font-size: 1.2rem; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .btn-step:active { background: #444; }
+        .step-input { width: 65px; height: 32px; background: #121212; border: 1px solid var(--border-color); color: white; text-align: center; font-size: 0.9rem; font-weight: bold; border-radius: 4px; }
 
-        .control-group { margin-bottom: 14px; }
-        .input-row { display: flex; align-items: center; gap: 12px; }
-        input[type="range"], input[type="time"] { flex: 1; accent-color: var(--accent-blue); background: #252525; color: white; border: 1px solid var(--border-color); padding: 4px; border-radius: 4px; }
-        .range-value { font-size: 1rem; font-weight: bold; width: 65px; text-align: right; }
+        /* CHANNEL SELECTOR CHIPS */
+        .chip-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
+        .chip { background: #252525; padding: 8px 2px; text-align: center; border-radius: 6px; font-size: 0.75rem; border: 1px solid var(--border-color); cursor: pointer; font-weight: bold; }
+        .chip.active { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
 
-        .event-log-container { display: flex; flex-direction: column; gap: 10px; }
-        .event-row { background: #151515; border-left: 3px solid var(--accent-blue); padding: 12px; border-radius: 6px; font-family: monospace; }
-        .event-time { font-size: 0.75rem; color: var(--accent-green); margin-bottom: 4px; font-weight: bold; }
-        .event-desc { font-size: 0.88rem; color: #e0e0e0; line-height: 1.4; }
+        /* TOGGLE OVERRIDE SWITCH */
+        .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a2a2a; margin-bottom: 12px; }
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-sw { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .2s; border-radius: 24px; }
+        .slider-sw:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+        input:checked + .slider-sw { background-color: var(--accent-green); }
+        input:checked + .slider-sw:before { transform: translateX(22px); }
+
+        /* TOOLTIP CONTEXT MODAL */
+        .info-btn { background: #2a2a2a; border: none; color: var(--accent-blue); width: 18px; height: 18px; border-radius: 50%; font-size: 0.7rem; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; max-width: 400px; width: 100%; text-align: center; }
+        .modal-close { background: var(--accent-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; margin-top: 16px; cursor: pointer; width: 100%; }
+
+        /* RACK TEXT NAMING BOX */
+        .name-input { background: #121212; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 0.85rem; margin-bottom: 12px; }
+
+        /* SYSTEM TERMINAL LOGGER */
+        .event-log-container { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+        .event-row { background: #151515; border-left: 3px solid var(--accent-blue); padding: 10px; border-radius: 4px; font-family: monospace; }
+        .event-time { font-size: 0.7rem; color: var(--accent-green); margin-bottom: 2px; font-weight: bold; }
+        .event-desc { font-size: 0.78rem; color: #e0e0e0; line-height: 1.3; }
+
+        .footer-row { display: flex; gap: 10px; margin-top: 8px; width: 100%; }
+        button.action-btn { flex: 2; background-color: var(--accent-green); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; }
+        #btn-refresh { flex: 1; background-color: #333333; border: 1px solid var(--border-color); color: white; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
+    <!-- SECURITY PASSCODE WALL -->
     <div id="auth-screen">
-        <h2 style="margin-bottom: 8px;">Enter Access PIN</h2>
+        <h2 style="margin-bottom: 4px; font-size: 1.2rem;">System Interlock PIN</h2>
         <div class="pin-display" id="pin-display"></div>
         <div class="keypad">
             <div class="key" onclick="appendPin('1')">1</div><div class="key" onclick="appendPin('2')">2</div><div class="key" onclick="appendPin('3')">3</div>
             <div class="key" onclick="appendPin('4')">4</div><div class="key" onclick="appendPin('5')">5</div><div class="key" onclick="appendPin('6')">6</div>
             <div class="key" onclick="appendPin('7')">7</div><div class="key" onclick="appendPin('8')">8</div><div class="key" onclick="appendPin('9')">9</div>
-            <div class="key" style="color: var(--status-off); font-size: 1.2rem;" onclick="clearPin()">CLR</div><div class="key" onclick="appendPin('0')">0</div>
-            <div class="key" style="color: var(--accent-green); font-size: 1.2rem;" onclick="verifyPin()">GO</div>
+            <div class="key" style="color: var(--status-off); font-size: 1.1rem;" onclick="clearPin()">CLR</div><div class="key" onclick="appendPin('0')">0</div>
+            <div class="key" style="color: var(--accent-green); font-size: 1.1rem;" onclick="verifyPin()">GO</div>
         </div>
     </div>
 
+    <!-- MAIN CONTROL HUB INTERFACE CONTAINER -->
     <div class="container" id="main-dashboard">
-        <h1>☀️ Solar AC Control Panel</h1>
-        <div class="timestamp-header" id="execution-timestamp">System Idle</div>
+        <h1>☀️ Solar Automation DCS</h1>
+        <div class="timestamp-header" id="execution-timestamp">DCS Link Offline</div>
 
         <div class="tab-bar">
-            <button class="tab-btn active" onclick="switchTab('control-tab', this)">🎛️ Control Panel</button>
-            <button class="tab-btn" onclick="switchTab('logs-tab', this)">📋 Event History</button>
+            <button class="tab-btn active" onclick="switchTab('monitor-tab', this)">🎛️ Live Monitor</button>
+            <button class="tab-btn" onclick="switchTab('config-tab', this)">🔧 Device Config</button>
+            <button class="tab-btn" onclick="switchTab('priority-tab', this)">🚦 Priority Matrix</button>
         </div>
 
-        <!-- TAB 1: CONTROL DASHBOARD -->
-        <div id="control-tab" class="tab-content active">
+        <!-- TAB 1: LIVE MONITOR DASHBOARD -->
+        <div id="monitor-tab" class="tab-content active">
             <div class="card">
-                <div class="card-title">Live API Telemetry</div>
-                <div class="metric-group">
-                    <div><label style="font-size: 0.8rem; color: var(--text-sub);">PV Generation</label><div id="pv-power" class="metric-value value-solar">-- W</div></div>
-                    <div><label style="font-size: 0.8rem; color: var(--text-sub);">Battery SOC</label><div id="battery-soc" class="metric-value value-battery">--%</div></div>
+                <div class="card-title">Plant Telemetry Vectors</div>
+                <div class="metric-grid">
+                    <div class="metric-card"><div class="metric-label">Solar Generation</div><div id="pv-power" class="metric-value" style="color:#ffb74d;">-- W</div></div>
+                    <div class="metric-card"><div class="metric-label">Battery SOC</div><div id="battery-soc" class="metric-value" style="color:var(--accent-green);">--%</div></div>
+                    <div class="metric-card"><div class="metric-label">Grid Import</div><div id="grid-power" class="metric-value" style="color:var(--status-off);">-- W</div></div>
+                </div>
+                <div id="vector-status-tag" class="vector-tag vector-charging">SYNCING CONTROL LOGIC...</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">10-Channel Hardware Matrix Rack</div>
+                <div class="matrix-w">
+                    <table class="matrix-table">
+                        <thead>
+                            <tr>
+                                <th>Ch</th>
+                                <th>Assigned Asset Label</th>
+                                <th>State</th>
+                                <th>Setp</th>
+                                <th>Mode</th>
+                                <th>Seq</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-rack-body">
+                            <!-- Populated Dynamically by app.js -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-title">Active Target Automation</div>
-                <div id="automation-action" style="font-size: 1.05rem; line-height: 1.4; color:#e0e0e0;">Syncing matrix states...</div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">PLC Hardware I/O Channel Status</div>
-                <div class="io-rack">
-                    <div class="io-channel analog" id="ch-ao1"><div><span class="io-tag">[AO1]</span> <span>Smart Midea AC 1 SP</span></div><div class="io-status" id="txt-ao1">--°C</div></div>
-                    <div class="io-channel analog" id="ch-ao2"><div><span class="io-tag">[AO2]</span> <span>Smart Midea AC 2 SP</span></div><div class="io-status" id="txt-ao2">--°C</div></div>
-                    <div class="io-channel" id="ch-do1"><div><span class="io-tag">[DO1]</span> <span>Smart Midea AC 1 Power</span></div><div class="io-status" id="txt-do1">--</div></div>
-                    <div class="io-channel" id="ch-do2"><div><span class="io-tag">[DO2]</span> <span>Smart Midea AC 2 Power</span></div><div class="io-status" id="txt-do2">--</div></div>
-                    <div class="io-channel" id="ch-do3"><div><span class="io-tag">[DO3]</span> <span>Non-Smart AC Relay</span></div><div class="io-status" id="txt-do3">--</div></div>
-                    <div class="io-channel" id="ch-do4"><div><span class="io-tag">[DO4]</span> <span>Water Heater Relay</span></div><div class="io-status" id="txt-do4">--</div></div>
-                    <div class="io-channel" id="ch-do5"><div><span class="io-tag">[DO5]</span> <span>Water Pump Relay</span></div><div class="io-status" id="txt-do5">--</div></div>
-                </div>
-            </div>
-
-            <!-- DCS CONTROLLABILITY MATRIX TUNING CARD -->
-            <div class="card">
-                <div class="card-title">1. Temperature Controllability Bounds</div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Tier 4: Lowest Boundary (SP_LOWLOW)</label>
-                    <div class="input-row"><input type="range" id="param-sp-lowlow" min="16" max="23" step="1" value="21"><span id="val-sp-lowlow" class="range-value">21°C</span></div>
-                </div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Tier 3: Low-Mid Setpoint (SP_LOW_MID)</label>
-                    <div class="input-row"><input type="range" id="param-sp-low-mid" min="22" max="25" step="1" value="24"><span id="val-sp-low-mid" class="range-value">24°C</span></div>
-                </div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Tier 2: High-Mid Setpoint (SP_HIGH_MID)</label>
-                    <div class="input-row"><input type="range" id="param-sp-high-mid" min="24" max="27" step="1" value="25"><span id="val-sp-high-mid" class="range-value">25°C</span></div>
-                </div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Tier 1: Maximum Boundary (SP_HIGH)</label>
-                    <div class="input-row"><input type="range" id="param-sp-high" min="26" max="30" step="1" value="27"><span id="val-sp-high" class="range-value">27°C</span></div>
-                </div>
-
-                <div class="card-title" style="margin-top:20px;">2. Wattage Thresholds & Deadbands</div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Massive Excess Target (Max Trigger)</label>
-                    <div class="input-row"><input type="range" id="param-excess-max" min="3000" max="6000" step="100" value="4000"><span id="val-excess-max" class="range-value">4000W</span></div>
-                </div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Safe Power Excess Target (Mid Trigger)</label>
-                    <div class="input-row"><input type="range" id="param-excess-mid" min="1500" max="3500" step="100" value="2500"><span id="val-excess-mid" class="range-value">2500W</span></div>
-                </div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Low Solar Drop Trigger (Low Trigger)</label>
-                    <div class="input-row"><input type="range" id="param-excess-low" min="400" max="1500" step="100" value="1200"><span id="val-excess-low" class="range-value">1200W</span></div>
-                </div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Hysteresis Power Deadband</label>
-                    <div class="input-row"><input type="range" id="param-deadband" min="50" max="300" step="25" value="150"><span id="val-deadband" class="range-value">150W</span></div>
-                </div>
-
-                <div class="card-title" style="margin-top:20px;">3. Scheduling & Night Cutoffs</div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Day Window Start Time</label>
-                    <div class="input-row"><input type="time" id="param-time-start" value="06:00"></div>
-                </div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Night Window Start Time</label>
-                    <div class="input-row"><input type="time" id="param-time-end" value="18:00"></div>
-                </div>
-                <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Night Battery Emergency Cutoff</label>
-                    <div class="input-row"><input type="range" id="param-bat-cutoff" min="15" max="40" step="5" value="20"><span id="val-bat-cutoff" class="range-value">20%</span></div>
-                </div>
-
-                <div class="btn-row" style="margin-top:20px;">
-                    <button id="btn-refresh" type="button">🔄 Force Sync</button>
-                    <button class="action-btn" id="btn-save" type="button">💾 Save Config Matrix</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- TAB 2: LIVE LOG TERMINAL TRACKER -->
-        <div id="logs-tab" class="tab-content">
-            <div class="card">
-                <div class="card-title">Rolling Data Logger (Last 100 Actions)</div>
+                <div class="card-title">Sequential Event History Logs</div>
                 <div class="event-log-container" id="event-log-terminal">
-                    <div style="color: var(--text-sub); text-align: center; font-family: monospace; font-size: 0.9rem; padding: 20px;">No recorded sequential events parsed. Tap Force Sync.</div>
+                    <div style="color: var(--text-sub); text-align: center; font-family: monospace; font-size: 0.8rem; padding: 10px;">Initializing process log array buffer...</div>
                 </div>
             </div>
+        </div>
+
+        <!-- TAB 2: DEVICE ASSET CONFIGURATION -->
+        <div id="config-tab" class="tab-content">
+            <div class="card">
+                <div class="card-title">Select Channel to Provision</div>
+                <div class="chip-grid">
+                    <div class="chip active" onclick="selectConfigChannel('AO1', this)">AO1</div>
+                    <div class="chip" onclick="selectConfigChannel('AO2', this)">AO2</div>
+                    <div class="chip" onclick="selectConfigChannel('AO3', this)">AO3</div>
+                    <div class="chip" onclick="selectConfigChannel('AO4', this)">AO4</div>
+                    <div class="chip" onclick="selectConfigChannel('AO5', this)">AO5</div>
+                </div>
+                <div class="chip-grid">
+                    <div class="chip" onclick="selectConfigChannel('DO1', this)">DO1</div>
+                    <div class="chip" onclick="selectConfigChannel('DO2', this)">DO2</div>
+                    <div class="chip" onclick="selectConfigChannel('DO3', this)">DO3</div>
+                    <div class="chip" onclick="selectConfigChannel('DO4', this)">DO4</div>
+                    <div class="chip" onclick="selectConfigChannel('DO5', this)">DO5</div>
+                </div>
+            </div>
+
+            <div class="card" id="channel-provision-card">
+                <div class="card-title"><span id="config-target-title">AO1 Hardware Settings</span></div>
+                
+                <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">Custom Asset Description Label</label>
+                <input type="text" id="cfg-custom-name" class="name-input" placeholder="Enter custom hardware description...">
+
+                <div class="switch-row">
+                    <div>
+                        <div style="font-size:0.85rem; font-weight:bold;">Manual Override (Hand Mode) <button class="info-btn" onclick="showHelp('hand')">i</button></div>
+                        <div style="font-size:0.7rem; color:var(--text-sub);">Bypasses automated solar calculations</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="cfg-override-toggle" onchange="toggleOverrideUI()"><span class="slider-sw"></span></label>
+                </div>
+
+                <!-- DYNAMIC PORTION FOR DO/AO MANUAL TARGETS -->
+                <div class="switch-row" id="cfg-do-manual-row" style="display:none;">
+                    <div>
+                        <div style="font-size:0.85rem; font-weight:bold;">Forced Hand State</div>
+                        <div style="font-size:0.7rem; color:var(--text-sub);">Set output hard ON or OFF</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="cfg-do-state-toggle"><span class="slider-sw"></span></label>
+                </div>
+
+                <!-- DYNAMIC PORTION FOR AO INDIVIDUAL LIMIT TUNING -->
+                <div id="cfg-ao-limits-block">
+                    <div style="font-size: 0.75rem; color: var(--text-sub); font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Analog Temperature Band Boundaries</div>
+                    
+                    <div class="step-container">
+                        <div class="step-label">Tier 4 Max Excess (SP_LOWLOW)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-lowlow', -1)">-</button><input type="number" id="cfg-sp-lowlow" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-lowlow', 1)">+</button></div>
+                    </div>
+                    <div class="step-container">
+                        <div class="step-label">Tier 3 Stable Excess (SP_LOW_MID)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-low-mid', -1)">-</button><input type="number" id="cfg-sp-low-mid" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-low-mid', 1)">+</button></div>
+                    </div>
+                    <div class="step-container">
+                        <div class="step-label">Tier 2 Light Excess (SP_HIGH_MID)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-high-mid', -1)">-</button><input type="number" id="cfg-sp-high-mid" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-high-mid', 1)">+</button></div>
+                    </div>
+                    <div class="step-container">
+                        <div class="step-label">Tier 1 Eco Boundary (SP_HIGH)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-high', -1)">-</button><input type="number" id="cfg-sp-high" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-high', 1)">+</button></div>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC PORTION FOR DO SEQUENCER MAPPING -->
+                <div id="cfg-do-priority-block" style="display:none;">
+                    <div class="step-container">
+                        <div class="step-label">Sequence Priority Queue (1-5)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-priority', -1, 1, 5)">-</button><input type="number" id="cfg-priority" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-priority', 1, 1, 5)">+</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: MASTER PRIORITY AND MATRIX RATIOS -->
+        <div id="priority-tab" class="tab-content">
+            <div class="card">
+                <div class="card-title">Global Optimization Permissives</div>
+                
+                <div class="step-container">
+                    <div class="step-label">Auto Activation Min SOC <button class="info-btn" onclick="showHelp('soc')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-min-soc', -5, 20, 95)">-</button><input type="number" id="mat-min-soc" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-min-soc', 5, 20, 95)">+</button></div>
+                </div>
+
+                <div class="step-container">
+                    <div class="step-label">True Discharge Threshold <button class="info-btn" onclick="showHelp('discharge')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-discharge-th', -25, 50, 1000)">-</button><input type="number" id="mat-discharge-th" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-discharge-th', 25, 50, 1000)">+</button></div>
+                </div>
+
+                <div class="step-container">
+                    <div class="step-label">Hysteresis Power Deadband <button class="info-btn" onclick="showHelp('deadband')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-deadband', -25, 50, 500)">-</button><input type="number" id="mat-deadband" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-deadband', 25, 50, 500)">+</button></div>
+                </div>
+
+                <div class="step-container">
+                    <div class="step-label">Cascading Stage Delay <button class="info-btn" onclick="showHelp('delay')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-delay', -1, 1, 20)">-</button><input type="number" id="mat-delay" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-delay', 1, 1, 20)">+</button></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Daytime Window Operations <button class="info-btn" onclick="showHelp('time')">i</button></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    <div>
+                        <label style="font-size:0.7rem; color:var(--text-sub);">Start Optimization</label>
+                        <input type="time" id="mat-time-start" style="width:100%; height:36px; background:#181818; border:1px solid var(--border-color); color:white; padding:4px; border-radius:6px; font-size:0.9rem; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem; color:var(--text-sub);">Force Night Standby</label>
+                        <input type="time" id="mat-time-end" style="width:100%; height:36px; background:#181818; border:1px solid var(--border-color); color:white; padding:4px; border-radius:6px; font-size:0.9rem; box-sizing:border-box;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">DCS Sequence Execution Queue Maps</div>
+                <div style="font-family:monospace; font-size:0.8rem; display:flex; flex-direction:column; gap:6px;" id="queue-mapping-list">
+                    <!-- Loaded Dynamically via script arrays -->
+                </div>
+            </div>
+        </div>
+
+        <!-- GLOBAL CONTROL PERSISTENCE STRIP -->
+        <div class="footer-row">
+            <button id="btn-refresh" type="button" onclick="executeMasterSync()">🔄 Sync</button>
+            <button class="action-btn" id="btn-save" type="button" onclick="commitMatrixConfig()">💾 Save Config Matrix</button>
+        </div>
+    </div>
+
+    <!-- CONTEXT HELP DIALOG MODAL -->
+    <div class="modal" id="help-modal">
+        <div class="modal-content">
+            <h3 id="help-title" style="margin-top:0; font-size:1.1rem; color:var(--accent-blue);">Help</h3>
+            <p id="help-text" style="font-size:0.85rem; line-height:1.4; color:#e0e0e0; text-align:justify; margin-bottom:0;"></p>
+            <button class="modal-close" onclick="closeHelp()">Dismiss Interlock Dialog</button>
         </div>
     </div>
 
