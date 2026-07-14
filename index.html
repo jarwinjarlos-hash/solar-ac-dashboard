@@ -269,9 +269,46 @@
 
         <!-- TAB 3: MASTER PRIORITY AND MATRIX RATIOS -->
         <div id="priority-tab" class="tab-content">
+            <!-- SAAS TURNKEY TELEMETRY REGISTERS -->
+            <div class="card">
+                <div class="card-title">Commercial Plant Provision Node <button class="info-btn" onclick="showHelp('saas')">i</button></div>
+                <label style="font-size:0.7rem; color:var(--text-sub); display:block; margin-bottom:2px;">Home Assistant End-Point URL</label>
+                <input type="text" id="net-ha-url" class="name-input" placeholder="http://192.168.1.XX:8123">
+                
+                <label style="font-size:0.7rem; color:var(--text-sub); display:block; margin-bottom:2px;">Long-Lived Bearer Security Access Token</label>
+                <input type="password" id="net-ha-token" class="name-input" placeholder="Bearer Authorization Key...">
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:4px;">
+                    <div>
+                        <label style="font-size:0.65rem; color:var(--text-sub);">Solar Sensor Entity ID</label>
+                        <input type="text" id="ent-solar" class="name-input" placeholder="sensor.deye_pv_power" style="font-size:0.75rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem; color:var(--text-sub);">Battery SOC Entity ID</label>
+                        <input type="text" id="ent-soc" class="name-input" placeholder="sensor.battery_status_soc" style="font-size:0.75rem;">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div>
+                        <label style="font-size:0.65rem; color:var(--text-sub);">Battery Watts Entity ID</label>
+                        <input type="text" id="ent-batt-p" class="name-input" placeholder="sensor.battery_power" style="font-size:0.75rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem; color:var(--text-sub);">Grid Power Entity ID</label>
+                        <input type="text" id="ent-grid" class="name-input" placeholder="sensor.grid_power_import" style="font-size:0.75rem;">
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-title">Global Optimization Permissives</div>
                 
+                <!-- SIMULATED SOLAR OFFSET FIELD -->
+                <div class="step-container" style="border: 1px solid var(--accent-orange);">
+                    <div class="step-label" style="color: var(--accent-orange);">Simulated Solar Offset <button class="info-btn" onclick="showHelp('offset')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" style="border-color:var(--accent-orange);" onclick="adjustStep('mat-solar-offset', -100, -5000, 5000)">-</button><input type="number" id="mat-solar-offset" class="step-input" value="0" readonly><button class="btn-step" style="border-color:var(--accent-orange);" onclick="adjustStep('mat-solar-offset', 100, -5000, 5000)">+</button></div>
+                </div>
+
                 <div class="step-container">
                     <div class="step-label">Auto Activation Min SOC <button class="info-btn" onclick="showHelp('soc')">i</button></div>
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-min-soc', -5, 20, 95)">-</button><input type="number" id="mat-min-soc" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-min-soc', 5, 20, 95)">+</button></div>
