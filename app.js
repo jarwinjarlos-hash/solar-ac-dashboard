@@ -1,12 +1,14 @@
 // ==========================================
-// ☀️ COMMERCIAL SOLAR DCS VIRTUAL ENGINE (app.js)
+// ☀️ COMMERCIAL SOLAR DCS AUTOMATION ENGINE (app.js)
 // ==========================================
 
 let currentChannel = 'AO1';
 let pinBuffer = "";
 const VALID_PIN = "1981";
 
-// 1. Storage Matrix Configuration Template
+// 🌟 REPLACE WITH YOUR ACTUAL ACTIVE RENDER WEB SERVICE URL
+const RENDER_BACKEND_URL = "https://your-solar-ac-bridge.onrender.com";
+
 let configMatrix = {
     customNames: {
         AO1: "Smart AC 1 Setpoint", AO2: "Smart AC 2 Setpoint", AO3: "Spare Analog 3", AO4: "Spare Analog 4", AO5: "Spare Analog 5",
@@ -31,9 +33,8 @@ let configMatrix = {
     global: { minSoc: 85, dischargeTh: 150, deadband: 100, delay: 5, timeStart: "08:00", timeEnd: "17:00" }
 };
 
-// 2. Process Registers
-let liveTelemetry = { basePv: 785, calculatedPv: 785, batterySoc: 100, gridPower: 0, batteryCurrent: 61, isCharging: true };
-let currentOutputStates = { AO1: 24, AO2: 24, AO3: 26, AO4: 26, AO5: 26, DO1: true, DO2: true, DO3: false, DO4: false, DO5: false };
+let liveTelemetry = { basePv: 0, calculatedPv: 0, batterySoc: 100, gridPower: 0, batteryCurrent: 0, isCharging: true };
+let currentOutputStates = { AO1: 24, AO2: 24, AO3: 26, AO4: 26, AO5: 26, DO1: false, DO2: false, DO3: false, DO4: false, DO5: false };
 let lastRecordedAction = "";
 
 const helpStrings = {
@@ -124,7 +125,7 @@ function initApp() {
     renderMatrixRackTable();
     renderChannelConfigPage();
     
-    // Load Client-Side Inverter Credential Persistence Rings
+    // Load local storage inputs on launch
     document.getElementById("net-inv-sn").value = localStorage.getItem("dcs_inv_sn") || "";
     document.getElementById("net-app-id").value = localStorage.getItem("dcs_app_id") || "";
     document.getElementById("net-app-secret").value = localStorage.getItem("dcs_app_secret") || "";
@@ -132,12 +133,12 @@ function initApp() {
     document.getElementById("net-portal-pass").value = localStorage.getItem("dcs_portal_pass") || "";
 
     executeMasterSync();
+    syncTelemetryFromBackend();
     
-    // Process core logic sequences on a continuous 1-Second tick loop
+    // 30-Second live loop interval for syncing with the cloud portal
     setInterval(() => {
-        processVirtualCalculations();
-        executeMasterSync();
-    }, 1000);
+        syncTelemetryFromBackend();
+    }, 30000);
 }
 
 function loadGlobalPriorityInputs() {
@@ -150,25 +151,55 @@ function loadGlobalPriorityInputs() {
 }
 
 // ==========================================
-// 🌦️ PURE VIRTUAL SIMULATION RUNTIME AUTOMATION KERNEL
+// 📡 LIVE BACKEND SYNC BRIDGE LAYER
 // ==========================================
-function processVirtualCalculations() {
-    let solarDrift = Math.floor(Math.random() * 11) - 5; 
-    liveTelemetry.basePv = Math.max(100, liveTelemetry.basePv + solarDrift);
+async function syncTelemetryFromBackend() {
+    const invSn = document.getElementById("net-inv-sn").value;
+    const appId = document.getElementById("net-app-id").value;
+    const appSecret = document.getElementById("net-app-secret").value;
+    const email = document.getElementById("net-portal-user").value;
+    const pass = document.getElementById("net-portal-pass").value;
 
-    let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
-    liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
+    if (!appId || !appSecret || !email || !pass) {
+        evaluateAndPrintCleanLog("STANDBY: Input credentials in Priority Tab to authorize live Sync.");
+        return;
+    }
 
-    if (liveTelemetry.calculatedPv < 400) {
-        liveTelemetry.batterySoc = Math.max(80, liveTelemetry.batterySoc - 1);
-        liveTelemetry.batteryCurrent = configMatrix.global.dischargeTh + 80; 
-        liveTelemetry.isCharging = false;
-        liveTelemetry.gridPower = 150; 
-    } else {
-        liveTelemetry.batterySoc = Math.min(100, liveTelemetry.batterySoc + 1);
-        liveTelemetry.batteryCurrent = 45; 
-        liveTelemetry.isCharging = true;
-        liveTelemetry.gridPower = 0;
+    try {
+        // Post credentials to your dynamic Render sync engine
+        const response = await fetch(`${RENDER_BACKEND_URL}/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: email,
+                password: pass,
+                app_id: appId,
+                app_secret: appSecret,
+                inverter_sn: invSn
+            })
+        });
+
+        if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+        const data = await response.json();
+
+        if (data.status === "success") {
+            const measurements = data.measurements || data.telemetry || {};
+            liveTelemetry.basePv = parseFloat(measurements.PV_Generation_W || measurements.PV_Power_W || measurements.PV_Power || 0);
+            liveTelemetry.batterySoc = parseInt(measurements.Battery_SOC || measurements.battery_soc || 100);
+            liveTelemetry.gridPower = parseFloat(measurements.Grid_Power_W || measurements.Grid_Power || 0);
+            
+            // Apply offset calculation
+            let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
+            liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
+            
+            evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry loaded. Solar=${liveTelemetry.calculatedPv}W, SOC=${liveTelemetry.batterySoc}%`);
+            executeMasterSync();
+        } else {
+            evaluateAndPrintCleanLog(`SYNC ERROR: Backend returned error - ${data.message}`);
+        }
+    } catch (e) {
+        console.error("DCS Link Connection Failure:", e);
+        evaluateAndPrintCleanLog(`CONNECTION ERROR: Unable to parse response from Render backend. Retrying...`);
     }
 }
 
@@ -204,26 +235,19 @@ function processAutomatedStagingSequence() {
     let power = liveTelemetry.calculatedPv;
     let db = configMatrix.global.deadband;
     
-    if (power > (1000 + db)) {
-        if (!configMatrix.overrides.DO1 && !currentOutputStates.DO1) {
-            currentOutputStates.DO1 = true;
-            evaluateAndPrintCleanLog("ENGINE HIGH PROD: Threshold + Deadband crossed. Sequential Staging starting: Triggering [DO1] ON.");
-        }
-        if (!configMatrix.overrides.DO2 && currentOutputStates.DO1 && !currentOutputStates.DO2) {
-            currentOutputStates.DO2 = true;
-            evaluateAndPrintCleanLog("ENGINE STEP UP: Staging delay verification satisfied. Engaging next tier priority: Triggering [DO2] ON.");
-        }
+    // Day logic based on ruleset low, mid, max excess values
+    if (power > (4000 + db)) {
+        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
+        if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = true;
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.lowlow;
         if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.lowlow;
-    } else if (power < (500 - db)) {
-        if (!configMatrix.overrides.DO2 && currentOutputStates.DO2) {
-            currentOutputStates.DO2 = false;
-            evaluateAndPrintCleanLog("ENGINE SHED: Production drop detected below Deadband boundary. Shedding Priority 2: [DO2] turned OFF.");
-        }
+    } else if (power < (1200 - db)) {
+        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = false;
+        if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.high;
         if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.high;
     } else {
-        let msg = `DCS NORMAL: Plant metrics stable within deadband envelope. Virtual solar running at ${power}W.`;
+        let msg = `DCS NORMAL: Plant metrics stable within deadband envelope. Solar running at ${power}W.`;
         if (lastRecordedAction.startsWith("DCS NORMAL")) lastRecordedAction = msg; 
         evaluateAndPrintCleanLog(msg);
     }
@@ -296,7 +320,7 @@ function renderChannelConfigPage() {
     document.getElementById("config-target-title").innerText = `${currentChannel} Channel Settings`;
     document.getElementById("cfg-custom-name").value = configMatrix.customNames[currentChannel];
     
-    const isOverride = document.getElementById("cfg-override-toggle").checked;
+    const isOverride = configMatrix.overrides[currentChannel];
     document.getElementById("cfg-override-toggle").checked = isOverride;
 
     if (isAO) {
@@ -349,10 +373,8 @@ function commitMatrixConfig() {
     configMatrix.global.timeStart = document.getElementById("mat-time-start").value;
     configMatrix.global.timeEnd = document.getElementById("mat-time-end").value;
 
-    // Push profile updates to LocalStorage
     localStorage.setItem("dcs_client_matrix", JSON.stringify(configMatrix));
     
-    // Lock personal hardware keys directly inside browser memory rings
     localStorage.setItem("dcs_inv_sn", document.getElementById("net-inv-sn").value);
     localStorage.setItem("dcs_app_id", document.getElementById("net-app-id").value);
     localStorage.setItem("dcs_app_secret", document.getElementById("net-app-secret").value);
@@ -360,7 +382,9 @@ function commitMatrixConfig() {
     localStorage.setItem("dcs_portal_pass", document.getElementById("net-portal-pass").value);
 
     logEvent(`SYS RECONFIG: Client profile compiled and saved locally to offline LocalStorage matrix.`);
-    renderMatrixRackTable();
+    
+    // Trigger immediate background sync request upon click
+    syncTelemetryFromBackend();
 }
 
 // ==========================================
