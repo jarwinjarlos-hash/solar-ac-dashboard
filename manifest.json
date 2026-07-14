@@ -1,17 +1,17 @@
 {
-  "name": "Solar AC Control Panel",
-  "short_name": "SolarAC",
-  "description": "Dynamic Solar optimization wrapper dashboard for automated Deye-Midea tracking",
+  "name": "Solar Load Optimization DCS",
+  "short_name": "Solar DCS",
+  "description": "Industrial grade solar and battery optimization platform.",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#121212",
-  "theme-color": "#121212",
+  "theme_color": "#121212",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/869/869869.png",
-      "sizes": "512x512",
+      "src": "https://cdn-icons-png.flaticon.com/512/3222/3222672.png",
       "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     }
   ]
