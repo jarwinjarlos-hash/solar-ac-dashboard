@@ -2,12 +2,10 @@
 // ☀️ SOLAR AUTOMATION ENGINE CORE CONFIG (app.js)
 // ==========================================
 
-// 1. Core State Matrix Initial Variable Definitions
 let currentChannel = 'AO1';
 let pinBuffer = "";
 const VALID_PIN = "1981";
 
-// 2. Default Hardware State Models (10 Channels)
 let configMatrix = {
     permissives: { DO1: true, DO2: true, DO3: true, DO4: true, DO5: true },
     customNames: {
@@ -33,12 +31,10 @@ let configMatrix = {
     global: { minSoc: 85, dischargeTh: 150, deadband: 100, delay: 5, timeStart: "08:00", timeEnd: "17:00" }
 };
 
-// 3. Simulated Live Telemetry Track Registers
 let liveTelemetry = { pvPower: 785, batterySoc: 100, gridPower: 0, batteryCurrent: 61, isCharging: true };
 let currentOutputStates = { AO1: 24, AO2: 24, AO3: 26, AO4: 26, AO5: 26, DO1: true, DO2: true, DO3: false, DO4: false, DO5: false };
 let lastRecordedAction = "";
 
-// Help Modal Object Strings
 const helpStrings = {
     hand: "Bypasses all automatic solar/battery step calculations. Decouples this specific output channel to give you permanent, hard command over its target values.",
     soc: "The minimum battery state-of-charge percentage required to authorize automated execution loops during daytime optimization hours.",
@@ -89,7 +85,7 @@ function switchTab(tabId, btn) {
 }
 
 function selectConfigChannel(ch, chip) {
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#config-tab .chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     currentChannel = ch;
     renderChannelConfigPage();
@@ -104,6 +100,7 @@ function closeHelp() { document.getElementById("help-modal").style.display = "no
 
 function adjustStep(id, delta, min = 0, max = 10000) {
     let input = document.getElementById(id);
+    if (!input) return;
     let currentVal = parseInt(input.value) || 0;
     let newVal = currentVal + delta;
     if (newVal >= min && newVal <= max) {
@@ -180,7 +177,7 @@ function toggleOverrideUI() {
     const isOverride = document.getElementById("cfg-override-toggle").checked;
     const isAO = currentChannel.startsWith('AO');
     if (isAO) {
-        document.getElementById("cfg-ao-limits-block").style.style = isOverride ? "none" : "block";
+        document.getElementById("cfg-ao-limits-block").style.display = "block";
     } else {
         document.getElementById("cfg-do-manual-row").style.display = isOverride ? "flex" : "none";
         document.getElementById("cfg-do-priority-block").style.display = isOverride ? "none" : "block";
@@ -237,7 +234,6 @@ function commitMatrixConfig() {
         }
     }
 
-    // Pull Global Params
     configMatrix.global.minSoc = parseInt(document.getElementById("mat-min-soc").value);
     configMatrix.global.dischargeTh = parseInt(document.getElementById("mat-discharge-th").value);
     configMatrix.global.deadband = parseInt(document.getElementById("mat-deadband").value);
@@ -253,7 +249,6 @@ function commitMatrixConfig() {
 // 🔁 PROCESS AUTOMATION LOGIC SYNC
 // ==========================================
 function executeMasterSync() {
-    // Inject Live Dashboard Numbers
     document.getElementById("pv-power").innerText = `${liveTelemetry.pvPower} W`;
     document.getElementById("battery-soc").innerText = `${liveTelemetry.batterySoc}%`;
     document.getElementById("grid-power").innerText = `${liveTelemetry.gridPower} W`;
@@ -261,7 +256,6 @@ function executeMasterSync() {
 
     let statusTag = document.getElementById("vector-status-tag");
     
-    // Evaluate Vector Loop
     let th = configMatrix.global.dischargeTh;
     let isTrueDischarging = (liveTelemetry.batteryCurrent > th) && (!liveTelemetry.isCharging);
 
@@ -278,12 +272,10 @@ function executeMasterSync() {
 }
 
 function processManualSafetyLock() {
-    // In actual production, this block enforces manual override across automation registers
     evaluateAndPrintCleanLog("CRITICAL STANDBY: True battery drainage detected. Discoupling logic trackers to Manual state.");
 }
 
 function processAutomatedStagingLoop() {
-    // Process algorithm tracks limits, priorities and symmetric power deadbands here
     let descString = `DCS NORMAL: System operating securely. Solar generation at ${liveTelemetry.pvPower}W with Battery SOC hovering at ${liveTelemetry.batterySoc}%.`;
     evaluateAndPrintCleanLog(descString);
 }
@@ -292,13 +284,14 @@ function processAutomatedStagingLoop() {
 // 📋 DEDUPLICATED EVENT LOG TERMINAL
 // ==========================================
 function evaluateAndPrintCleanLog(logMessage) {
-    if (logMessage === lastRecordedAction) return; // Block duplication chatter
+    if (logMessage === lastRecordedAction) return;
     lastRecordedAction = logMessage;
     logEvent(logMessage);
 }
 
 function logEvent(desc) {
     const container = document.getElementById("event-log-terminal");
+    if (!container) return;
     if (container.innerHTML.includes("Initializing process log")) container.innerHTML = "";
     
     const timestamp = new Date().toLocaleTimeString();
@@ -311,7 +304,6 @@ function logEvent(desc) {
     
     container.innerHTML = row + container.innerHTML;
     
-    // Limit rolling capacity bounds to 100 entries max
     while (container.children.length > 100) {
         container.removeChild(container.lastChild);
     }
