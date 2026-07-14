@@ -1,1 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar AC Optimizer</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-green: #4caf50;
+            --accent-blue: #2196f3;
+            --text-main: #ffffff;
+            --text-sub: #aaaaaa;
+            --border-color: #333333;
+        }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .metric-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-top: 4px;
+        }
+
+        .value-solar { color: #ffb74d; }
+        .value-battery { color: var(--accent-green); }
+
+        .status-text {
+            font-size: 1.1rem;
+            line-height: 1.5;
+            color: #e0e0e0;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+            margin-bottom: 6px;
+        }
+
+        .input-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--accent-blue);
+        }
+
+        .range-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            width: 60px;
+            text-align: right;
+        }
+
+        button {
+            width: 100%;
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+
+        button:active {
+            background-color: #0b7dda;
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>☀️ Solar AC Control Panel</h1>
+
+        <!-- LIVE TELEMETRY CARD -->
+        <div class="card">
+            <div class="card-title">Live Telemetry</div>
+            <div class="metric-group">
+                <div>
+                    <label>PV Generation</label>
+                    <div id="pv-power" class="metric-value value-solar">0 W</div>
+                </div>
+                <div>
+                    <label>Battery SOC</label>
+                    <div id="battery-soc" class="metric-value value-battery">0%</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CURRENT AUTOMATION STATE -->
+        <div class="card">
+            <div class="card-title">Active Automation Status</div>
+            <div id="automation-action" class="status-text">Loading controller data...</div>
+            <div id="time-manila" class="footer-note" style="text-align: left; margin-top: 8px;">Sync time: --</div>
+        </div>
+
+        <!-- PARAMETER ADJUSTMENT CONTROLS -->
+        <div class="card">
+            <div class="card-title">Threshold Parameters</div>
+            
+            <div class="control-group">
+                <label for="param-day-high-pv">Day High Power Trigger (W)</label>
+                <div class="input-row">
+                    <input type="range" id="param-day-high-pv" min="1500" max="5000" step="100" value="2500">
+                    <span id="val-day-high-pv" class="range-value">2500W</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="param-day-high-bat">Day High Battery Trigger (%)</label>
+                <div class="input-row">
+                    <input type="range" id="param-day-high-bat" min="50" max="100" step="5" value="80">
+                    <span id="val-day-high-bat" class="range-value">80%</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label for="param-day-low-pv">Day Deficit Drop Trigger (W)</label>
+                <div class="input-row">
+                    <input type="range" id="param-day-low-pv" min="500" max="1500" step="100" value="1000">
+                    <span id="val-day-low-pv" class="range-value">1000W</span>
+                </div>
+            </div>
+
+            <button id="btn-save" type="button">Save Setpoints to Backend</button>
+        </div>
+
+        <div class="footer-note">System Architecture Stage: Beta 2 UI Shell</div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
