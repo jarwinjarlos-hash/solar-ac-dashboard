@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Solar AC Optimizer</title>
+    <title>Solar AC Control Panel</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -17,187 +17,160 @@
             --text-main: #ffffff;
             --text-sub: #aaaaaa;
             --border-color: #333333;
+            --status-off: #f44336;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            margin: 0;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 16px;
+            display: flex; flex-direction: column; align-items: center;
         }
 
-        .container {
-            width: 100%;
-            max-width: 500px;
-        }
+        .container { width: 100%; max-width: 500px; display: none; }
 
-        h1 {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-            text-align: center;
-            letter-spacing: 0.5px;
+        /* SECURITY PIN PAD OVERLAY */
+        #auth-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-color);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
         }
-
-        .card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 16px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        .pin-display { font-size: 2.5rem; letter-spacing: 10px; margin-bottom: 24px; height: 50px; }
+        .keypad { display: grid; grid-template-columns: repeat(3, 80px); gap: 16px; }
+        .key {
+            width: 80px; height: 80px; background-color: var(--card-bg); border: 1px solid var(--border-color);
+            font-size: 1.8rem; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer;
         }
+        .key:active { background-color: #333; }
 
-        .card-title {
-            font-size: 0.85rem;
-            color: var(--text-sub);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
+        /* MULTI-TAB NAVIGATION ELEMENTS */
+        .tab-bar {
+            display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 16px;
+            border: 1px solid var(--border-color); padding: 4px;
         }
-
-        .metric-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+        .tab-btn {
+            flex: 1; background: transparent; color: var(--text-sub); border: none; padding: 12px;
+            font-size: 0.9rem; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s;
         }
+        .tab-btn.active { background: var(--accent-blue); color: white; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
-        .metric-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            margin-top: 4px;
-        }
-
+        /* CONTENT ELEMENTS */
+        h1 { font-size: 1.4rem; margin: 0 0 4px 0; text-align: center; }
+        .timestamp-header { font-size: 0.8rem; color: var(--text-sub); text-align: center; margin-bottom: 16px; }
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color); }
+        .card-title { font-size: 0.8rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;}
+        
+        .metric-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .metric-value { font-size: 1.6rem; font-weight: bold; margin-top: 4px; }
         .value-solar { color: #ffb74d; }
         .value-battery { color: var(--accent-green); }
 
-        .status-text {
-            font-size: 1.1rem;
-            line-height: 1.5;
-            color: #e0e0e0;
-        }
+        .io-rack { display: grid; grid-template-columns: 1fr; gap: 10px; }
+        .io-channel { display: flex; justify-content: space-between; align-items: center; background: #252525; padding: 10px 14px; border-radius: 8px; border-left: 4px solid var(--border-color); }
+        .io-channel.active { border-left-color: var(--accent-green); }
+        .io-channel.analog { border-left-color: var(--accent-blue); }
+        .io-tag { font-size: 0.75rem; color: var(--text-sub); font-family: monospace; }
+        .io-status { font-size: 0.9rem; font-weight: bold; }
+        .status-on { color: var(--accent-green); }
 
-        .control-group {
-            margin-bottom: 16px;
-        }
+        .btn-row { display: flex; gap: 12px; margin-top: 8px; }
+        button.action-btn { width:100%; background-color: var(--accent-blue); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+        #btn-refresh { background-color: #333333; border: 1px solid var(--border-color); color: white; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer;}
 
-        .control-group:last-child {
-            margin-bottom: 0;
-        }
+        .control-group { margin-bottom: 12px; }
+        .input-row { display: flex; align-items: center; gap: 12px; }
+        input[type="range"] { flex: 1; accent-color: var(--accent-blue); }
+        .range-value { font-size: 1rem; font-weight: bold; width: 55px; text-align: right; }
 
-        label {
-            display: block;
-            font-size: 0.9rem;
-            color: var(--text-sub);
-            margin-bottom: 6px;
-        }
-
-        .input-row {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        input[type="range"] {
-            flex: 1;
-            accent-color: var(--accent-blue);
-        }
-
-        .range-value {
-            font-size: 1.1rem;
-            font-weight: bold;
-            width: 60px;
-            text-align: right;
-        }
-
-        button {
-            width: 100%;
-            background-color: var(--accent-blue);
-            color: white;
-            border: none;
-            padding: 14px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 8px;
-        }
-
-        button:active {
-            background-color: #0b7dda;
-        }
-
-        .footer-note {
-            text-align: center;
-            font-size: 0.75rem;
-            color: var(--text-sub);
-            margin-top: 12px;
-        }
+        /* LIVE EVENT INDUSTRIAL TERMINAL LOG */
+        .event-log-container { display: flex; flex-direction: column; gap: 10px; }
+        .event-row { background: #151515; border-left: 3px solid var(--accent-blue); padding: 12px; border-radius: 6px; font-family: monospace; }
+        .event-time { font-size: 0.75rem; color: var(--accent-green); margin-bottom: 4px; font-weight: bold; }
+        .event-desc { font-size: 0.88rem; color: #e0e0e0; line-height: 1.4; }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div id="auth-screen">
+        <h2 style="margin-bottom: 8px;">Enter Access PIN</h2>
+        <div class="pin-display" id="pin-display"></div>
+        <div class="keypad">
+            <div class="key" onclick="appendPin('1')">1</div><div class="key" onclick="appendPin('2')">2</div><div class="key" onclick="appendPin('3')">3</div>
+            <div class="key" onclick="appendPin('4')">4</div><div class="key" onclick="appendPin('5')">5</div><div class="key" onclick="appendPin('6')">6</div>
+            <div class="key" onclick="appendPin('7')">7</div><div class="key" onclick="appendPin('8')">8</div><div class="key" onclick="appendPin('9')">9</div>
+            <div class="key" style="color: var(--status-off); font-size: 1.2rem;" onclick="clearPin()">CLR</div><div class="key" onclick="appendPin('0')">0</div>
+            <div class="key" style="color: var(--accent-green); font-size: 1.2rem;" onclick="verifyPin()">GO</div>
+        </div>
+    </div>
+
+    <div class="container" id="main-dashboard">
         <h1>☀️ Solar AC Control Panel</h1>
+        <div class="timestamp-header" id="execution-timestamp">System Idle</div>
 
-        <!-- LIVE TELEMETRY CARD -->
-        <div class="card">
-            <div class="card-title">Live Telemetry</div>
-            <div class="metric-group">
-                <div>
-                    <label>PV Generation</label>
-                    <div id="pv-power" class="metric-value value-solar">0 W</div>
+        <!-- THE TAB BAR SELECTION -->
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('control-tab', this)">🎛️ Control Panel</button>
+            <button class="tab-btn" onclick="switchTab('logs-tab', this)">📋 Event History</button>
+        </div>
+
+        <!-- TAB 1: CONTROL DASHBOARD -->
+        <div id="control-tab" class="tab-content active">
+            <div class="card">
+                <div class="card-title">Live API Telemetry</div>
+                <div class="metric-group">
+                    <div><label style="font-size: 0.8rem; color: var(--text-sub);">PV Generation</label><div id="pv-power" class="metric-value value-solar">-- W</div></div>
+                    <div><label style="font-size: 0.8rem; color: var(--text-sub);">Battery SOC</label><div id="battery-soc" class="metric-value value-battery">--%</div></div>
                 </div>
-                <div>
-                    <label>Battery SOC</label>
-                    <div id="battery-soc" class="metric-value value-battery">0%</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Active Target Automation</div>
+                <div id="automation-action" style="font-size: 1.05rem; line-height: 1.4; color:#e0e0e0;">Syncing matrix states...</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">PLC Hardware I/O Channel Rack Status</div>
+                <div class="io-rack">
+                    <div class="io-channel analog" id="ch-ao1"><div><span class="io-tag">[AO1]</span> <span>Smart Midea AC 1 SP</span></div><div class="io-status" id="txt-ao1">--°C</div></div>
+                    <div class="io-channel analog" id="ch-ao2"><div><span class="io-tag">[AO2]</span> <span>Smart Midea AC 2 SP</span></div><div class="io-status" id="txt-ao2">--°C</div></div>
+                    <div class="io-channel" id="ch-do1"><div><span class="io-tag">[DO1]</span> <span>Smart Midea AC 1 Power</span></div><div class="io-status" id="txt-do1">--</div></div>
+                    <div class="io-channel" id="ch-do2"><div><span class="io-tag">[DO2]</span> <span>Smart Midea AC 2 Power</span></div><div class="io-status" id="txt-do2">--</div></div>
+                    <div class="io-channel" id="ch-do3"><div><span class="io-tag">[DO3]</span> <span>Non-Smart AC Relay (Aux)</span></div><div class="io-status" id="txt-do3">--</div></div>
+                    <div class="io-channel" id="ch-do4"><div><span class="io-tag">[DO4]</span> <span>Water Heater Relay</span></div><div class="io-status" id="txt-do4">--</div></div>
+                    <div class="io-channel" id="ch-do5"><div><span class="io-tag">[DO5]</span> <span>Water Pump Relay</span></div><div class="io-status" id="txt-do5">--</div></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Adjust Controllability Matrix</div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Max Solar Trigger Limit (W)</label>
+                    <div class="input-row"><input type="range" id="param-day-high-pv" min="1500" max="5000" step="100" value="2500"><span id="val-day-high-pv" class="range-value">2500W</span></div>
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Night Battery Off Cutoff (%)</label>
+                    <div class="input-row"><input type="range" id="param-day-high-bat" min="10" max="50" step="5" value="20"><span id="val-day-high-bat" class="range-value">20%</span></div>
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Low Solar Off Cutoff (W)</label>
+                    <div class="input-row"><input type="range" id="param-day-low-pv" min="400" max="1500" step="100" value="500"><span id="val-day-low-pv" class="range-value">500W</span></div>
+                </div>
+                <div class="btn-row">
+                    <button id="btn-refresh" type="button">🔄 Force Sync</button>
+                    <button class="action-btn" id="btn-save" type="button">💾 Save Configuration</button>
                 </div>
             </div>
         </div>
 
-        <!-- CURRENT AUTOMATION STATE -->
-        <div class="card">
-            <div class="card-title">Active Automation Status</div>
-            <div id="automation-action" class="status-text">Loading controller data...</div>
-            <div id="time-manila" class="footer-note" style="text-align: left; margin-top: 8px;">Sync time: --</div>
+        <!-- TAB 2: LIVE LOG TERMINAL TRACKER -->
+        <div id="logs-tab" class="tab-content">
+            <div class="card">
+                <div class="card-title">Rolling Data Logger (Last 100 Actions)</div>
+                <div class="event-log-container" id="event-log-terminal">
+                    <div style="color: var(--text-sub); text-align: center; font-family: monospace; font-size: 0.9rem; padding: 20px;">No recorded sequential events parsed. Tap Force Sync.</div>
+                </div>
+            </div>
         </div>
-
-        <!-- PARAMETER ADJUSTMENT CONTROLS -->
-        <div class="card">
-            <div class="card-title">Threshold Parameters</div>
-            
-            <div class="control-group">
-                <label for="param-day-high-pv">Day High Power Trigger (W)</label>
-                <div class="input-row">
-                    <input type="range" id="param-day-high-pv" min="1500" max="5000" step="100" value="2500">
-                    <span id="val-day-high-pv" class="range-value">2500W</span>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label for="param-day-high-bat">Day High Battery Trigger (%)</label>
-                <div class="input-row">
-                    <input type="range" id="param-day-high-bat" min="50" max="100" step="5" value="80">
-                    <span id="val-day-high-bat" class="range-value">80%</span>
-                </div>
-            </div>
-
-            <div class="control-group">
-                <label for="param-day-low-pv">Day Deficit Drop Trigger (W)</label>
-                <div class="input-row">
-                    <input type="range" id="param-day-low-pv" min="500" max="1500" step="100" value="1000">
-                    <span id="val-day-low-pv" class="range-value">1000W</span>
-                </div>
-            </div>
-
-            <button id="btn-save" type="button">Save Setpoints to Backend</button>
-        </div>
-
-        <div class="footer-note">System Architecture Stage: Beta 2 UI Shell</div>
     </div>
 
     <script src="app.js"></script>
