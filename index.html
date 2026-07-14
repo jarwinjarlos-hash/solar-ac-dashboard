@@ -28,7 +28,6 @@
 
         .container { width: 100%; max-width: 500px; display: none; }
 
-        /* SECURITY PIN PAD OVERLAY */
         #auth-screen {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-color);
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
@@ -41,7 +40,6 @@
         }
         .key:active { background-color: #333; }
 
-        /* MULTI-TAB NAVIGATION ELEMENTS */
         .tab-bar {
             display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 16px;
             border: 1px solid var(--border-color); padding: 4px;
@@ -54,11 +52,10 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* CONTENT ELEMENTS */
         h1 { font-size: 1.4rem; margin: 0 0 4px 0; text-align: center; }
         .timestamp-header { font-size: 0.8rem; color: var(--text-sub); text-align: center; margin-bottom: 16px; }
         .card { background-color: var(--card-bg); border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid var(--border-color); }
-        .card-title { font-size: 0.8rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;}
+        .card-title { font-size: 0.8rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px;}
         
         .metric-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
         .metric-value { font-size: 1.6rem; font-weight: bold; margin-top: 4px; }
@@ -77,12 +74,11 @@
         button.action-btn { width:100%; background-color: var(--accent-blue); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
         #btn-refresh { background-color: #333333; border: 1px solid var(--border-color); color: white; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer;}
 
-        .control-group { margin-bottom: 12px; }
+        .control-group { margin-bottom: 14px; }
         .input-row { display: flex; align-items: center; gap: 12px; }
-        input[type="range"] { flex: 1; accent-color: var(--accent-blue); }
-        .range-value { font-size: 1rem; font-weight: bold; width: 55px; text-align: right; }
+        input[type="range"], input[type="time"] { flex: 1; accent-color: var(--accent-blue); background: #252525; color: white; border: 1px solid var(--border-color); padding: 4px; border-radius: 4px; }
+        .range-value { font-size: 1rem; font-weight: bold; width: 65px; text-align: right; }
 
-        /* LIVE EVENT INDUSTRIAL TERMINAL LOG */
         .event-log-container { display: flex; flex-direction: column; gap: 10px; }
         .event-row { background: #151515; border-left: 3px solid var(--accent-blue); padding: 12px; border-radius: 6px; font-family: monospace; }
         .event-time { font-size: 0.75rem; color: var(--accent-green); margin-bottom: 4px; font-weight: bold; }
@@ -107,7 +103,6 @@
         <h1>☀️ Solar AC Control Panel</h1>
         <div class="timestamp-header" id="execution-timestamp">System Idle</div>
 
-        <!-- THE TAB BAR SELECTION -->
         <div class="tab-bar">
             <button class="tab-btn active" onclick="switchTab('control-tab', this)">🎛️ Control Panel</button>
             <button class="tab-btn" onclick="switchTab('logs-tab', this)">📋 Event History</button>
@@ -129,35 +124,73 @@
             </div>
 
             <div class="card">
-                <div class="card-title">PLC Hardware I/O Channel Rack Status</div>
+                <div class="card-title">PLC Hardware I/O Channel Status</div>
                 <div class="io-rack">
                     <div class="io-channel analog" id="ch-ao1"><div><span class="io-tag">[AO1]</span> <span>Smart Midea AC 1 SP</span></div><div class="io-status" id="txt-ao1">--°C</div></div>
                     <div class="io-channel analog" id="ch-ao2"><div><span class="io-tag">[AO2]</span> <span>Smart Midea AC 2 SP</span></div><div class="io-status" id="txt-ao2">--°C</div></div>
                     <div class="io-channel" id="ch-do1"><div><span class="io-tag">[DO1]</span> <span>Smart Midea AC 1 Power</span></div><div class="io-status" id="txt-do1">--</div></div>
                     <div class="io-channel" id="ch-do2"><div><span class="io-tag">[DO2]</span> <span>Smart Midea AC 2 Power</span></div><div class="io-status" id="txt-do2">--</div></div>
-                    <div class="io-channel" id="ch-do3"><div><span class="io-tag">[DO3]</span> <span>Non-Smart AC Relay (Aux)</span></div><div class="io-status" id="txt-do3">--</div></div>
+                    <div class="io-channel" id="ch-do3"><div><span class="io-tag">[DO3]</span> <span>Non-Smart AC Relay</span></div><div class="io-status" id="txt-do3">--</div></div>
                     <div class="io-channel" id="ch-do4"><div><span class="io-tag">[DO4]</span> <span>Water Heater Relay</span></div><div class="io-status" id="txt-do4">--</div></div>
                     <div class="io-channel" id="ch-do5"><div><span class="io-tag">[DO5]</span> <span>Water Pump Relay</span></div><div class="io-status" id="txt-do5">--</div></div>
                 </div>
             </div>
 
+            <!-- DCS CONTROLLABILITY MATRIX TUNING CARD -->
             <div class="card">
-                <div class="card-title">Adjust Controllability Matrix</div>
+                <div class="card-title">1. Temperature Controllability Bounds</div>
                 <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Max Solar Trigger Limit (W)</label>
-                    <div class="input-row"><input type="range" id="param-day-high-pv" min="1500" max="5000" step="100" value="2500"><span id="val-day-high-pv" class="range-value">2500W</span></div>
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Tier 4: Lowest Boundary (SP_LOWLOW)</label>
+                    <div class="input-row"><input type="range" id="param-sp-lowlow" min="16" max="23" step="1" value="21"><span id="val-sp-lowlow" class="range-value">21°C</span></div>
                 </div>
                 <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Night Battery Off Cutoff (%)</label>
-                    <div class="input-row"><input type="range" id="param-day-high-bat" min="10" max="50" step="5" value="20"><span id="val-day-high-bat" class="range-value">20%</span></div>
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Tier 3: Low-Mid Setpoint (SP_LOW_MID)</label>
+                    <div class="input-row"><input type="range" id="param-sp-low-mid" min="22" max="25" step="1" value="24"><span id="val-sp-low-mid" class="range-value">24°C</span></div>
                 </div>
                 <div class="control-group">
-                    <label style="font-size: 0.85rem; color:var(--text-sub);">Low Solar Off Cutoff (W)</label>
-                    <div class="input-row"><input type="range" id="param-day-low-pv" min="400" max="1500" step="100" value="500"><span id="val-day-low-pv" class="range-value">500W</span></div>
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Tier 2: High-Mid Setpoint (SP_HIGH_MID)</label>
+                    <div class="input-row"><input type="range" id="param-sp-high-mid" min="24" max="27" step="1" value="25"><span id="val-sp-high-mid" class="range-value">25°C</span></div>
                 </div>
-                <div class="btn-row">
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Tier 1: Maximum Boundary (SP_HIGH)</label>
+                    <div class="input-row"><input type="range" id="param-sp-high" min="26" max="30" step="1" value="27"><span id="val-sp-high" class="range-value">27°C</span></div>
+                </div>
+
+                <div class="card-title" style="margin-top:20px;">2. Wattage Thresholds & Deadbands</div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Massive Excess Target (Max Trigger)</label>
+                    <div class="input-row"><input type="range" id="param-excess-max" min="3000" max="6000" step="100" value="4000"><span id="val-excess-max" class="range-value">4000W</span></div>
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Safe Power Excess Target (Mid Trigger)</label>
+                    <div class="input-row"><input type="range" id="param-excess-mid" min="1500" max="3500" step="100" value="2500"><span id="val-excess-mid" class="range-value">2500W</span></div>
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Low Solar Drop Trigger (Low Trigger)</label>
+                    <div class="input-row"><input type="range" id="param-excess-low" min="400" max="1500" step="100" value="1200"><span id="val-excess-low" class="range-value">1200W</span></div>
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Hysteresis Power Deadband</label>
+                    <div class="input-row"><input type="range" id="param-deadband" min="50" max="300" step="25" value="150"><span id="val-deadband" class="range-value">150W</span></div>
+                </div>
+
+                <div class="card-title" style="margin-top:20px;">3. Scheduling & Night Cutoffs</div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Day Window Start Time</label>
+                    <div class="input-row"><input type="time" id="param-time-start" value="06:00"></div>
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Night Window Start Time</label>
+                    <div class="input-row"><input type="time" id="param-time-end" value="18:00"></div>
+                </div>
+                <div class="control-group">
+                    <label style="font-size: 0.85rem; color:var(--text-sub);">Night Battery Emergency Cutoff</label>
+                    <div class="input-row"><input type="range" id="param-bat-cutoff" min="15" max="40" step="5" value="20"><span id="val-bat-cutoff" class="range-value">20%</span></div>
+                </div>
+
+                <div class="btn-row" style="margin-top:20px;">
                     <button id="btn-refresh" type="button">🔄 Force Sync</button>
-                    <button class="action-btn" id="btn-save" type="button">💾 Save Configuration</button>
+                    <button class="action-btn" id="btn-save" type="button">💾 Save Config Matrix</button>
                 </div>
             </div>
         </div>
