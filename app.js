@@ -308,3 +308,12 @@ function logEvent(desc) {
         container.removeChild(container.lastChild);
     }
 }
+
+// ==========================================
+// 📦 PWA SERVICE WORKER REGISTRATION
+// ==========================================
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("DCS Optimization Kernel: Service Worker Registered cleanly."))
+        .catch((err) => console.error("DCS Kernel Error: Service Worker registration failed:", err));
+}
