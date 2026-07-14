@@ -5,8 +5,8 @@ if ('serviceWorker' in navigator) {
 }
 
 // ================= CONFIGURATION =================
-const BACKEND_URL = "https://solar-ac-bridge.onrender.com"; // Set to your actual backend domain
-const ACCESS_PIN = "1981"; // PIN code for access
+const BACKEND_URL = "https://solar-ac-bridge.onrender.com"; 
+const ACCESS_PIN = "1981"; 
 // =================================================
 
 let enteredPin = "";
@@ -53,15 +53,25 @@ const refreshBtn = document.getElementById('btn-refresh');
 const saveBtn = document.getElementById('btn-save');
 const logTerminal = document.getElementById('event-log-terminal');
 
+// Array Mapping for all 11 variables to handle slider visualization changes
 const sliders = [
-    { id: 'param-day-high-pv', valId: 'val-day-high-pv', suffix: 'W' },
-    { id: 'param-day-high-bat', valId: 'val-day-high-bat', suffix: '%' },
-    { id: 'param-day-low-pv', valId: 'val-day-low-pv', suffix: 'W' }
+    { id: 'param-sp-lowlow', valId: 'val-sp-lowlow', suffix: '°C' },
+    { id: 'param-sp-low-mid', valId: 'val-sp-low-mid', suffix: '°C' },
+    { id: 'param-sp-high-mid', valId: 'val-sp-high-mid', suffix: '°C' },
+    { id: 'param-sp-high', valId: 'val-sp-high', suffix: '°C' },
+    { id: 'param-excess-max', valId: 'val-excess-max', suffix: 'W' },
+    { id: 'param-excess-mid', valId: 'val-excess-mid', suffix: 'W' },
+    { id: 'param-excess-low', valId: 'val-excess-low', suffix: 'W' },
+    { id: 'param-deadband', valId: 'val-deadband', suffix: 'W' },
+    { id: 'param-bat-cutoff', valId: 'val-bat-cutoff', suffix: '%' }
 ];
+
 sliders.forEach(slider => {
     const inputEl = document.getElementById(slider.id);
     const displayEl = document.getElementById(slider.valId);
-    inputEl.addEventListener('input', (e) => { displayEl.textContent = e.target.value + slider.suffix; });
+    if(inputEl && displayEl) {
+        inputEl.addEventListener('input', (e) => { displayEl.textContent = e.target.value + slider.suffix; });
+    }
 });
 
 async function executeMasterSync() {
@@ -117,9 +127,9 @@ function updateSimulatedIORack(targetTemp, pvPower, batterySoc) {
     document.getElementById('txt-ao1').textContent = `${tTemp}°C`;
     document.getElementById('txt-ao2').textContent = `${tTemp}°C`;
     
-    if (pvPower < 500) {
+    if (pvPower < 1200) {
         setChannelState('do1', false); setChannelState('do2', false); setChannelState('do3', false); setChannelState('do4', false); setChannelState('do5', false);
-    } else if (pvPower >= 500 && pvPower < 2500) {
+    } else if (pvPower >= 1200 && pvPower < 2500) {
         setChannelState('do1', true); setChannelState('do2', false); setChannelState('do3', false); setChannelState('do4', false); setChannelState('do5', false);
     } else if (pvPower >= 2500 && pvPower < 4000) {
         setChannelState('do1', true); setChannelState('do2', true); setChannelState('do3', true); setChannelState('do4', false); setChannelState('do5', false);
@@ -138,17 +148,35 @@ function setChannelState(chId, isActive) {
 refreshBtn.addEventListener('click', executeMasterSync);
 
 saveBtn.addEventListener('click', async () => {
-    saveBtn.textContent = "Writing...";
+    saveBtn.textContent = "Writing Matrix...";
     saveBtn.disabled = true;
+    
+    // Package all components cleanly to match control philosophy rules
     const payload = {
-        day_high_pv: parseInt(document.getElementById('param-day-high-pv').value),
-        day_high_bat: parseInt(document.getElementById('param-day-high-bat').value),
-        day_low_pv: parseInt(document.getElementById('param-day-low-pv').value)
+        sp_lowlow: parseInt(document.getElementById('param-sp-lowlow').value),
+        sp_low_mid: parseInt(document.getElementById('param-sp-low-mid').value),
+        sp_high_mid: parseInt(document.getElementById('param-sp-high-mid').value),
+        sp_high: parseInt(document.getElementById('param-sp-high').value),
+        excess_max: parseInt(document.getElementById('param-excess-max').value),
+        excess_mid: parseInt(document.getElementById('param-excess-mid').value),
+        excess_low: parseInt(document.getElementById('param-excess-low').value),
+        deadband: parseInt(document.getElementById('param-deadband').value),
+        time_start: document.getElementById('param-time-start').value,
+        time_end: document.getElementById('param-time-end').value,
+        bat_cutoff: parseInt(document.getElementById('param-bat-cutoff').value)
     };
+
     try {
-        const res = await fetch(`${BACKEND_URL}/setpoints`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const res = await fetch(`${BACKEND_URL}/setpoints`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+        });
         const confirmation = await res.json();
-        if (confirmation.status === 'success') { alert("Parameters updated!"); executeMasterSync(); }
-    } catch (e) { alert("Communication failure."); }
-    finally { saveBtn.textContent = "💾 Save Configuration"; saveBtn.disabled = false; }
+        if (confirmation.status === 'success') { 
+            alert("Control philosophy tuning matrix deployed successfully!"); 
+            executeMasterSync(); 
+        }
+    } catch (e) { alert("Communication failure pushing tuning values down."); }
+    finally { saveBtn.textContent = "💾 Save Config Matrix"; saveBtn.disabled = false; }
 });
