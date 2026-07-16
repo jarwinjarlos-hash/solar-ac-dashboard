@@ -6,8 +6,8 @@ let currentChannel = 'AO1';
 let pinBuffer = "";
 const VALID_PIN = "1981";
 
-// 🌟 REPLACE WITH YOUR ACTUAL ACTIVE RENDER WEB SERVICE URL
-const RENDER_BACKEND_URL = "https://solar-ac-bridge.onrender.com/sync";
+// 🌟 FULLY INTEGRATED LIVE RENDER WEB SERVICE BASE URL
+const RENDER_BACKEND_URL = "https://solar-ac-bridge.onrender.com";
 
 let configMatrix = {
     customNames: {
@@ -151,7 +151,7 @@ function loadGlobalPriorityInputs() {
 }
 
 // ==========================================
-// 📡 LIVE BACKEND SYNC BRIDGE LAYER
+// 📡 UNBLOCKED LIVE BACKEND SYNC BRIDGE LAYER
 // ==========================================
 async function syncTelemetryFromBackend() {
     const invSn = document.getElementById("net-inv-sn").value;
@@ -160,34 +160,33 @@ async function syncTelemetryFromBackend() {
     const email = document.getElementById("net-portal-user").value;
     const pass = document.getElementById("net-portal-pass").value;
 
-    if (!appId || !appSecret || !email || !pass) {
-        evaluateAndPrintCleanLog("STANDBY: Input inverter credentials in Tab 3 to map live data streams.");
-        return;
-    }
-
     try {
+        // Build payload ONLY if fields are explicitly filled; otherwise pass empty object so backend defaults run
+        const payload = (appId && appSecret && email && pass) ? {
+            email: email,
+            password: pass,
+            app_id: appId,
+            app_secret: appSecret,
+            inverter_sn: invSn
+        } : {};
+
         const response = await fetch(`${RENDER_BACKEND_URL}/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: email,
-                password: pass,
-                app_id: appId,
-                app_secret: appSecret,
-                inverter_sn: invSn
-            })
+            body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP Server Error: ${response.status}`);
         const data = await response.json();
 
         if (data.status === "success") {
+            // Unpack exact uppercase parameters matching your backend measurements dictionary response
             const measurements = data.measurements || data.telemetry || {};
-            liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W || measurements.PV_Power_W || measurements.generationPower || 0);
-            liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC || measurements.battery_soc || measurements.batterySOC || 100);
-            liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W || measurements.usePower || 0);
+            liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W ?? measurements.PV_Power_W ?? 0);
+            liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC ?? measurements.battery_soc ?? 100);
+            liveTelemetry.gridPower = floatSafe(measurements.Estimated_Calculated_Excess_W ?? 0);
             
-            // Apply layout offset safely over live base parameters
+            // Apply layout offset safety calculation over live base parameters
             let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
             liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
             
@@ -198,7 +197,7 @@ async function syncTelemetryFromBackend() {
         }
     } catch (e) {
         console.error("DCS Link Layer Error:", e);
-        evaluateAndPrintCleanLog(`CONNECTION TIMEOUT: Render server compiling or sleeping. Re-linking framework...`);
+        evaluateAndPrintCleanLog(`LINK ERROR: ${e.message}. Verifying Render URL and server deployment state.`);
     }
 }
 
