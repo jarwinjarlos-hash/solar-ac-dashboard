@@ -87,7 +87,7 @@ function adjustStep(id, delta, min = -5000, max = 10000) {
 function initApp() {
     let savedConfig = localStorage.getItem("dcs_client_matrix");
     if (savedConfig) {
-        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config corrupted."); }
+        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config array corrupted."); }
     }
     
     loadGlobalPriorityInputs();
@@ -144,7 +144,6 @@ async function syncTelemetryFromBackend() {
             let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
             liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
             
-            // Core balanced line power vector maps
             liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
 
             evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry loaded. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
@@ -170,31 +169,31 @@ function executeMasterSync() {
     document.getElementById("lbl-load").innerText = `${liveTelemetry.calculatedLoad} W`;
     
     let batKw = (Math.abs(liveTelemetry.batteryPower) / 1000).toFixed(2);
-    document.getElementById("lbl-bat").innerText = `${liveTelemetry.batteryPower < 0 ? '-' : ''}${batKw} kW`;
+    document.getElementById("lbl-bat").innerText = `${batKw} kW`;
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
-    // 🌟 PERCENTAGE VECTOR LINE MOTION TRIGGER CORES
+    // 🌟 RE-LINKED SEGMENT-ISOLATED LINE MOTION PATHWAYS
     updateLineMotion("path-pv", liveTelemetry.calculatedPv > 50, "active-out");
     updateLineMotion("path-load", liveTelemetry.calculatedLoad > 50, "active-out");
     
-    // Grid line status tracking registers
+    // Grid Segment Drivers
     if (liveTelemetry.gridPower > 50) {
-        updateLineMotion("path-grid-in", true, "active-out"); 
+        updateLineMotion("path-grid-in", true, "active-out"); // Inward flow toward inverter entry point
         updateLineMotion("path-grid-out", false);
     } else if (liveTelemetry.gridPower < -50) {
-        updateLineMotion("path-grid-out", true, "active-out"); 
+        updateLineMotion("path-grid-out", true, "active-out"); // Outward flow toward grid box entry point
         updateLineMotion("path-grid-in", false);
     } else {
         updateLineMotion("path-grid-in", false);
         updateLineMotion("path-grid-out", false);
     }
 
-    // Battery line status tracking registers
+    // Battery Segment Drivers
     if (liveTelemetry.batteryPower > 50) {
-        updateLineMotion("path-bat-in", true, "active-out"); // Charging line motion outward
+        updateLineMotion("path-bat-in", true, "active-out"); // Outward flow toward battery box entry point (Charging)
         updateLineMotion("path-bat-out", false);
     } else if (liveTelemetry.batteryPower < -50) {
-        updateLineMotion("path-bat-out", true, "active-out"); // Discharging line motion inward
+        updateLineMotion("path-bat-out", true, "active-out"); // Inward flow toward inverter entry point (Discharging)
         updateLineMotion("path-bat-in", false);
     } else {
         updateLineMotion("path-bat-in", false);
