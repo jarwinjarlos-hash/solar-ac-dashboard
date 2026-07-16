@@ -65,17 +65,17 @@
         .synoptic-wrapper { position: relative; width: 100%; height: 280px; background: #141414; border-radius: 8px; border: 1px solid #252525; box-sizing: border-box; overflow: hidden; }
         .synoptic-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         
-        /* Solid pipeline styling */
-        .flow-path { fill: none; stroke: #2a2a2a; stroke-width: 2.5; stroke-linecap: round; }
+        /* Sleek thinned pipeline styling */
+        .flow-path { fill: none; stroke: #262626; stroke-width: 1.5; stroke-linecap: round; }
         
-        /* Dynamic flowing dashboard vector dashes */
-        .flow-path.active-out { stroke: var(--accent-blue); animation: flowDash 1.2s linear infinite; stroke-dasharray: 6 4; }
-        .flow-path.active-in { stroke: var(--accent-green); animation: flowDashBack 1.2s linear infinite; stroke-dasharray: 6 4; }
+        /* High definition moving dashes */
+        .flow-path.active-out { stroke: var(--accent-blue); animation: flowDash 1s linear infinite; stroke-dasharray: 5 4; }
+        .flow-path.active-in { stroke: var(--accent-green); animation: flowDashBack 1s linear infinite; stroke-dasharray: 5 4; }
         
-        @keyframes flowDash { to { stroke-dashoffset: -20; } }
-        @keyframes flowDashBack { to { stroke-dashoffset: 20; } }
+        @keyframes flowDash { to { stroke-dashoffset: -18; } }
+        @keyframes flowDashBack { to { stroke-dashoffset: 18; } }
 
-        /* ABSOLUTE PERCENTAGE GRAPH NODES (Garantees perfect uniform tracking) */
+        /* ABSOLUTE PERCENTAGE GRAPH NODES (Guarantees perfect uniform tracking across viewports) */
         .syn-node-abs {
             position: absolute; background: #1c1c1c; border: 1px solid #333333; border-radius: 8px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -85,7 +85,7 @@
         .syn-lbl { font-size: 0.6rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
         .syn-val { font-size: 0.82rem; font-weight: bold; margin-top: 2px; }
 
-        /* Target Coordinate Node Deployments */
+        /* Coordinate Node Deployments */
         .node-solar   { top: 7%;   left: 4%;   border-color: var(--accent-orange); }
         .node-grid    { top: 7%;   right: 4%;  border-color: var(--accent-blue); }
         .node-battery { bottom: 7%; left: 4%;   border-color: var(--accent-green); }
@@ -164,30 +164,35 @@
                 <div class="card-title" style="margin-bottom:8px;">Synoptic Process Flow</div>
                 
                 <div class="synoptic-wrapper">
-                    <!-- PERCENTAGE-BASED SVG TRACK LAYER (Locked 1:1 with Box Centers) -->
+                    <!-- PERCENTAGE-BASED SVG TRACK LAYER (Perfected Segment-Isolated Paths) -->
                     <svg class="synoptic-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <!-- Upper Left: Solar to Inverter Core -->
-                        <path id="path-pv" d="M 20,19.5 L 50,19.5 L 50,50" class="flow-path"></path>
-                        <!-- Upper Right: Grid to Inverter Core (Import) -->
-                        <path id="path-grid-in" d="M 80,19.5 L 50,19.5 L 50,50" class="flow-path"></path>
-                        <!-- Upper Right: Inverter Core to Grid (Export) -->
-                        <path id="path-grid-out" d="M 50,50 L 50,19.5 L 80,19.5" class="flow-path"></path>
-                        <!-- Lower Left: Inverter Core to Battery Unit (Charging) -->
-                        <path id="path-bat-in" d="M 50,50 L 50,80.5 L 20,80.5" class="flow-path"></path>
-                        <!-- Lower Left: Battery Unit to Inverter Core (Discharging) -->
-                        <path id="path-bat-out" d="M 20,80.5 L 50,80.5 L 50,50" class="flow-path"></path>
-                        <!-- Lower Right: Inverter Core to Household Load -->
-                        <path id="path-load" d="M 50,50 L 50,80.5 L 80,80.5" class="flow-path"></path>
+                        <!-- Upper Left Segment: Solar to Inverter Core Entry -->
+                        <path id="path-pv" d="M 20,19.5 L 50,19.5 L 50,37.5" class="flow-path"></path>
+                        
+                        <!-- Upper Right Segment: Utility Grid to Inverter Core (Import) -->
+                        <path id="path-grid-in" d="M 80,19.5 L 50,19.5 L 50,37.5" class="flow-path"></path>
+                        
+                        <!-- Upper Right Segment: Inverter Core out to Utility Grid (Export) -->
+                        <path id="path-grid-out" d="M 50,37.5 L 50,19.5 L 80,19.5" class="flow-path"></path>
+                        
+                        <!-- Lower Left Segment: Inverter Core exit to Battery Unit (Charging) -->
+                        <path id="path-bat-in" d="M 50,62.5 L 50,80.5 L 20,80.5" class="flow-path"></path>
+                        
+                        <!-- Lower Left Segment: Battery Unit to Inverter Core Entry (Discharging) -->
+                        <path id="path-bat-out" d="M 20,80.5 L 50,80.5 L 50,62.5" class="flow-path"></path>
+                        
+                        <!-- Lower Right Segment: Inverter Core exit to Household Load -->
+                        <path id="path-load" d="M 50,62.5 L 50,80.5 L 80,80.5" class="flow-path"></path>
                     </svg>
 
-                    <!-- HTML NODES MAPPED BY ABSOLUTE CONSTRIBUTES -->
-                    <!-- Solar -->
+                    <!-- HTML NODES MAPPED BY ABSOLUTE CONSTRAINTS -->
+                    <!-- Solar Block -->
                     <div class="syn-node-abs node-solar">
                         <span class="syn-lbl">Solar</span>
                         <span id="lbl-pv" class="syn-val" style="color: var(--accent-orange);">0.00 kW</span>
                     </div>
                     
-                    <!-- Grid -->
+                    <!-- Grid Block -->
                     <div class="syn-node-abs node-grid">
                         <span class="syn-lbl">Grid</span>
                         <span id="lbl-grid" class="syn-val" style="color: var(--accent-blue);">0 W</span>
@@ -199,14 +204,14 @@
                         <span style="color:#b39ddb; font-size:0.55rem; font-family:monospace; margin-top:2px;">8k Box</span>
                     </div>
                     
-                    <!-- Battery Unit Box -->
+                    <!-- Battery Block (Perfectly Uniform Layout Match) -->
                     <div class="syn-node-abs node-battery">
-                        <span class="syn-lbl" style="font-weight:bold; color:var(--text-main);">BATTERY BANK</span>
-                        <span id="lbl-soc" class="syn-lbl" style="color: var(--accent-green); font-weight:bold; font-size:0.72rem; margin-top:1px;">100% SOC</span>
-                        <span id="lbl-bat" class="syn-val" style="color: var(--accent-green);">0.00 kW</span>
+                        <span class="syn-lbl">Battery</span>
+                        <span id="lbl-soc" class="syn-val" style="color: var(--accent-green);">100% SOC</span>
+                        <span id="lbl-bat" class="syn-val" style="color: var(--accent-green); font-size: 0.72rem; font-weight: normal; margin-top: 1px;">0.00 kW</span>
                     </div>
                     
-                    <!-- Household Load -->
+                    <!-- Household Load Block -->
                     <div class="syn-node-abs node-load">
                         <span class="syn-lbl">Load</span>
                         <span id="lbl-load" class="syn-val" style="color: #e91e63;">0 W</span>
@@ -291,7 +296,7 @@
             </div>
         </div>
 
-        <!-- TAB 3: MATRIX SETTINGS -->
+        <!-- TAB 3: MATRIX CONFIG -->
         <div id="priority-tab" class="tab-content">
             <div class="card">
                 <div class="card-title">Inverter Link Credentials</div>
