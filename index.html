@@ -61,21 +61,21 @@
         .card { background-color: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); position: relative; box-sizing: border-box; }
         .card-title { font-size: 0.78rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; }
         
-        /* FIXED PERCENTAGE SYNOPTIC CANVAS FRAMEWORK */
+        /* SYNOPTIC CANVAS FRAMEWORK */
         .synoptic-wrapper { position: relative; width: 100%; height: 280px; background: #141414; border-radius: 8px; border: 1px solid #252525; box-sizing: border-box; overflow: hidden; }
         .synoptic-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         
-        /* Sleek thinned pipeline styling */
-        .flow-path { fill: none; stroke: #262626; stroke-width: 1.5; stroke-linecap: round; }
+        /* Sleek 1.0px pipeline stroke profile */
+        .flow-path { fill: none; stroke: #262626; stroke-width: 1.0; stroke-linecap: round; }
         
-        /* High definition moving dashes */
-        .flow-path.active-out { stroke: var(--accent-blue); animation: flowDash 1s linear infinite; stroke-dasharray: 5 4; }
-        .flow-path.active-in { stroke: var(--accent-green); animation: flowDashBack 1s linear infinite; stroke-dasharray: 5 4; }
+        /* Smooth, slow 3-second dash animation vectors */
+        .flow-path.active-out { stroke: var(--accent-blue); animation: flowDash 3s linear infinite; stroke-dasharray: 5 4; }
+        .flow-path.active-in { stroke: var(--accent-green); animation: flowDashBack 3s linear infinite; stroke-dasharray: 5 4; }
         
         @keyframes flowDash { to { stroke-dashoffset: -18; } }
         @keyframes flowDashBack { to { stroke-dashoffset: 18; } }
 
-        /* ABSOLUTE PERCENTAGE GRAPH NODES (Guarantees perfect uniform tracking across viewports) */
+        /* ABSOLUTE PERCENTAGE GRAPH NODES */
         .syn-node-abs {
             position: absolute; background: #1c1c1c; border: 1px solid #333333; border-radius: 8px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -91,7 +91,7 @@
         .node-battery { bottom: 7%; left: 4%;   border-color: var(--accent-green); }
         .node-load    { bottom: 7%; right: 4%;  border-color: #e91e63; }
         
-        /* Small Centered Inverter Control Square */
+        /* Centered Inverter Control Square */
         .node-inverter-core {
             position: absolute; top: 37.5%; left: 38%; width: 24%; height: 25%;
             background: #15182b; border: 2px solid #b39ddb; border-radius: 8px;
@@ -164,24 +164,19 @@
                 <div class="card-title" style="margin-bottom:8px;">Synoptic Process Flow</div>
                 
                 <div class="synoptic-wrapper">
-                    <!-- PERCENTAGE-BASED SVG TRACK LAYER (Perfected Segment-Isolated Paths) -->
+                    <!-- PERCENTAGE-BASED SVG TRACK LAYER -->
                     <svg class="synoptic-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <!-- Upper Left Segment: Solar to Inverter Core Entry -->
+                        <!-- Upper Left: Solar to Inverter Core Entry -->
                         <path id="path-pv" d="M 20,19.5 L 50,19.5 L 50,37.5" class="flow-path"></path>
-                        
-                        <!-- Upper Right Segment: Utility Grid to Inverter Core (Import) -->
+                        <!-- Upper Right: Utility Grid to Inverter Core (Import) -->
                         <path id="path-grid-in" d="M 80,19.5 L 50,19.5 L 50,37.5" class="flow-path"></path>
-                        
-                        <!-- Upper Right Segment: Inverter Core out to Utility Grid (Export) -->
+                        <!-- Upper Right: Inverter Core out to Utility Grid (Export) -->
                         <path id="path-grid-out" d="M 50,37.5 L 50,19.5 L 80,19.5" class="flow-path"></path>
-                        
-                        <!-- Lower Left Segment: Inverter Core exit to Battery Unit (Charging) -->
+                        <!-- Lower Left: Inverter Core exit to Battery Unit (Charging) -->
                         <path id="path-bat-in" d="M 50,62.5 L 50,80.5 L 20,80.5" class="flow-path"></path>
-                        
-                        <!-- Lower Left Segment: Battery Unit to Inverter Core Entry (Discharging) -->
+                        <!-- Lower Left: Battery Unit to Inverter Core Entry (Discharging) -->
                         <path id="path-bat-out" d="M 20,80.5 L 50,80.5 L 50,62.5" class="flow-path"></path>
-                        
-                        <!-- Lower Right Segment: Inverter Core exit to Household Load -->
+                        <!-- Lower Right: Inverter Core exit to Household Load -->
                         <path id="path-load" d="M 50,62.5 L 50,80.5 L 80,80.5" class="flow-path"></path>
                     </svg>
 
@@ -204,7 +199,7 @@
                         <span style="color:#b39ddb; font-size:0.55rem; font-family:monospace; margin-top:2px;">8k Box</span>
                     </div>
                     
-                    <!-- Battery Block (Perfectly Uniform Layout Match) -->
+                    <!-- Battery Block -->
                     <div class="syn-node-abs node-battery">
                         <span class="syn-lbl">Battery</span>
                         <span id="lbl-soc" class="syn-val" style="color: var(--accent-green);">100% SOC</span>
