@@ -30,7 +30,7 @@
 
         .container { width: 100%; max-width: 480px; }
 
-        /* PASSCODE OVERLAY */
+        /* SECURITY PASSCODE WALL */
         #auth-screen {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-color);
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
@@ -43,7 +43,7 @@
         }
         .key:active { background-color: #333; }
 
-        /* NAVIGATION TABS */
+        /* TABS NAVIGATION */
         .tab-bar {
             display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 10px;
             border: 1px solid var(--border-color); padding: 4px; width: 100%;
@@ -61,49 +61,33 @@
         .card { background-color: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); position: relative; box-sizing: border-box; }
         .card-title { font-size: 0.78rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; }
         
-        /* MOBILE RESPONSIVE SYNOPTIC LAYOUT */
-        .synoptic-grid {
-            display: grid; grid-template-columns: 1fr 0.6fr 1fr; grid-template-rows: 1fr 1fr;
-            gap: 16px; position: relative; padding: 10px 4px; background: #151515; border-radius: 8px; border: 1px solid #252525;
-        }
+        /* UNIFORM SYNOPTIC FLOW MATRIX PACK */
+        .synoptic-wrapper { position: relative; width: 100%; height: 260px; background: #141414; border-radius: 8px; border: 1px solid #252525; padding: 12px; box-sizing: border-box; }
+        .synoptic-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        
+        /* Crisp Visible Connector Paths */
+        .flow-path { fill: none; stroke: #2a2a2a; stroke-width: 2; stroke-dasharray: 4 4; }
+        .flow-path.active-out { stroke: var(--accent-blue); animation: flowMove 2s linear infinite; stroke-dasharray: 6 3; }
+        .flow-path.active-in { stroke: var(--accent-green); animation: flowMoveBack 2s linear infinite; stroke-dasharray: 6 3; }
+        
+        @keyframes flowMove { to { stroke-dashoffset: -18; } }
+        @keyframes flowMoveBack { to { stroke-dashoffset: 18; } }
+
+        /* Completely Uniform Layout Nodes */
+        .syn-grid-layer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px 16px; position: relative; z-index: 2; height: 100%; align-content: center; }
         .syn-node {
-            background: #202020; border: 1px solid #353535; border-radius: 8px;
-            padding: 8px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; min-height: 65px; box-sizing: border-box; z-index: 2;
+            background: #1c1c1c; border: 1px solid #333333; border-radius: 8px;
+            padding: 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; height: 72px; box-sizing: border-box; box-shadow: 0 4px 8px rgba(0,0,0,0.4);
         }
-        .syn-lbl { font-size: 0.6rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
-        .syn-val { font-size: 0.85rem; font-weight: bold; margin-top: 2px; }
-        
-        .center-inv {
-            grid-column: 2; grid-row: 1 / span 2; align-self: center;
-            background: #1a237e; border: 1px solid var(--accent-blue); color: white;
-            border-radius: 8px; padding: 10px 2px; text-align: center; font-size: 0.7rem; font-weight: bold;
-        }
-
-        /* DYNAMIC PATH ANCHORS */
-        .flow-dot {
-            position: absolute; width: 6px; height: 6px; border-radius: 50%; background: white;
-            opacity: 0; pointer-events: none; z-index: 1;
-        }
-        .flow-active { opacity: 1; }
-        
-        /* DIRECTION ANIMATION TRACKS */
-        .pv-to-inv { left: 20%; top: 22%; animation: forceRight 1.5s linear infinite; background: var(--accent-orange); }
-        .inv-to-grid { right: 20%; top: 22%; animation: forceRight 1.5s linear infinite; background: var(--accent-blue); }
-        .grid-to-inv { right: 20%; top: 22%; animation: forceLeft 1.5s linear infinite; background: var(--status-off); }
-        .inv-to-load { right: 20%; bottom: 22%; animation: forceRight 1.5s linear infinite; background: #e91e63; }
-        
-        .inv-to-bat { left: 20%; bottom: 22%; animation: forceLeft 1.5s linear infinite; background: var(--accent-green); }
-        .bat-to-inv { left: 20%; bottom: 22%; animation: forceRight 1.5s linear infinite; background: #9c27b0; }
-
-        @keyframes forceRight { 0% { transform: translateX(0); } 100% { transform: translateX(45px); } }
-        @keyframes forceLeft { 0% { transform: translateX(45px); } 100% { transform: translateX(0); } }
+        .syn-lbl { font-size: 0.62rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
+        .syn-val { font-size: 0.85rem; font-weight: bold; margin-top: 3px; }
 
         .vector-tag { font-size: 0.72rem; font-weight: bold; padding: 5px; border-radius: 4px; margin-top: 10px; text-align: center; }
         .vector-charging { background: rgba(76, 175, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(76, 175, 80, 0.4); }
         .vector-discharging { background: rgba(244, 67, 54, 0.12); color: var(--status-off); border: 1px solid rgba(244, 67, 54, 0.4); }
 
-        /* MATRIX TABLE LAYOUT */
+        /* REGISTER DATA TABLE */
         .matrix-w { width: 100%; overflow-x: auto; }
         .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
         .matrix-table th { color: var(--text-sub); padding: 6px 2px; border-bottom: 1px solid var(--border-color); text-align: left; }
@@ -136,6 +120,7 @@
         .event-row { background: #141414; border-left: 3px solid var(--accent-blue); padding: 8px; border-radius: 4px; font-family: monospace; }
         .event-time { font-size: 0.65rem; color: var(--accent-green); }
         .event-desc { font-size: 0.72rem; color: #dddddd; margin-top: 2px; }
+        .name-input { background: #121212; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 0.85rem; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -164,43 +149,56 @@
 
         <!-- TAB 1: DASHBOARD -->
         <div id="monitor-tab" class="tab-content active">
-            <div class="card">
-                <div class="card-title">Synoptic Process Grid</div>
+            <div class="card" style="padding:8px;">
+                <div class="card-title" style="margin-bottom:8px;">Synoptic Process Flow</div>
                 
-                <div class="synoptic-grid">
-                    <!-- Solar -->
-                    <div class="syn-node" style="border-color: var(--accent-orange);">
-                        <span class="syn-lbl">Solar</span>
-                        <span id="lbl-pv" class="syn-val" style="color: var(--accent-orange);">0.00 kW</span>
-                        <div id="dot-pv" class="flow-dot pv-to-inv"></div>
-                    </div>
-                    
-                    <!-- Center Inverter Node -->
-                    <div class="center-inv">
-                        DEYE<br><span style="font-size:0.6rem;opacity:0.8;">Inverter</span>
-                    </div>
-                    
-                    <!-- Grid -->
-                    <div class="syn-node" style="border-color: var(--accent-blue);">
-                        <span class="syn-lbl">Grid</span>
-                        <span id="lbl-grid" class="syn-val" style="color: var(--accent-blue);">0 W</span>
-                        <div id="dot-grid-out" class="flow-dot inv-to-grid"></div>
-                        <div id="dot-grid-in" class="flow-dot grid-to-inv"></div>
-                    </div>
-                    
-                    <!-- Battery -->
-                    <div class="syn-node" style="border-color: var(--accent-green);">
-                        <span id="lbl-soc" class="syn-lbl" style="color: var(--accent-green); font-weight:bold;">100%</span>
-                        <span id="lbl-bat" class="syn-val" style="color: var(--accent-green);">0.00 kW</span>
-                        <div id="dot-bat-out" class="flow-dot bat-to-inv"></div>
-                        <div id="dot-bat-in" class="flow-dot inv-to-bat"></div>
-                    </div>
-                    
-                    <!-- Home Load -->
-                    <div class="syn-node" style="border-color: #e91e63;">
-                        <span class="syn-lbl">Load</span>
-                        <span id="lbl-load" class="syn-val" style="color: #e91e63;">0 W</span>
-                        <div id="dot-load" class="flow-dot inv-to-load"></div>
+                <div class="synoptic-wrapper">
+                    <!-- Dynamic responsive SVG pathway layer -->
+                    <svg class="synoptic-svg" viewBox="0 0 300 200" preserveAspectRatio="none">
+                        <!-- Top left to center -->
+                        <path id="path-pv" d="M 50,50 L 150,50 L 150,100" class="flow-path"></path>
+                        <!-- Center to top right -->
+                        <path id="path-grid" d="M 150,100 L 150,50 L 250,50" class="flow-path"></path>
+                        <!-- Bottom left to center -->
+                        <path id="path-bat" d="M 50,150 L 150,150 L 150,100" class="flow-path"></path>
+                        <!-- Center to bottom right -->
+                        <path id="path-load" d="M 150,100 L 150,150 L 250,150" class="flow-path"></path>
+                    </svg>
+
+                    <!-- Clean uniform layout components node grid -->
+                    <div class="syn-grid-layer">
+                        <!-- Node 1: Solar -->
+                        <div class="syn-node" style="border-color: var(--accent-orange); grid-column:1; grid-row:1;">
+                            <span class="syn-lbl">Solar</span>
+                            <span id="lbl-pv" class="syn-val" style="color: var(--accent-orange);">0.00 kW</span>
+                        </div>
+                        
+                        <!-- Node 2: Empty Spacer for matching grid alignments -->
+                        <div></div>
+                        
+                        <!-- Node 3: Grid -->
+                        <div class="syn-node" style="border-color: var(--accent-blue); grid-column:3; grid-row:1;">
+                            <span class="syn-lbl">Grid</span>
+                            <span id="lbl-grid" class="syn-val" style="color: var(--accent-blue);">0 W</span>
+                        </div>
+                        
+                        <!-- Node 4: Inverter -->
+                        <div class="syn-node" style="border-color: #9c27b0; grid-column:2; grid-row:1 / span 2; height:100%; background:#131525;">
+                            <span class="syn-lbl" style="color:#b39ddb;">DEYE</span>
+                            <span class="syn-val" style="color:#b39ddb; font-size:0.75rem; margin-top:4px;">Inverter</span>
+                        </div>
+                        
+                        <!-- Node 5: Battery -->
+                        <div class="syn-node" style="border-color: var(--accent-green); grid-column:1; grid-row:2;">
+                            <span id="lbl-soc" class="syn-lbl" style="color: var(--accent-green); font-weight:bold;">100%</span>
+                            <span id="lbl-bat" class="syn-val" style="color: var(--accent-green);">0.00 kW</span>
+                        </div>
+                        
+                        <!-- Node 6: Household Load -->
+                        <div class="syn-node" style="border-color: #e91e63; grid-column:3; grid-row:2;">
+                            <span class="syn-lbl">Load</span>
+                            <span id="lbl-load" class="syn-val" style="color: #e91e63;">0 W</span>
+                        </div>
                     </div>
                 </div>
 
@@ -253,9 +251,7 @@
                 <input type="text" id="cfg-custom-name" class="name-input">
 
                 <div class="switch-row">
-                    <div>
-                        <div style="font-size:0.8rem; font-weight:bold;">Manual Override (Hand Mode)</div>
-                    </div>
+                    <div><div style="font-size:0.8rem; font-weight:bold;">Manual Override (Hand Mode)</div></div>
                     <label class="switch"><input type="checkbox" id="cfg-override-toggle" onchange="toggleOverrideUI()"><span class="slider-sw"></span></label>
                 </div>
 
@@ -284,7 +280,7 @@
             </div>
         </div>
 
-        <!-- TAB 3: SETTING CREDENTIALS -->
+        <!-- TAB 3: MASTER MATRIX CONFIG -->
         <div id="priority-tab" class="tab-content">
             <div class="card">
                 <div class="card-title">Inverter Link Credentials</div>
