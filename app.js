@@ -26,7 +26,7 @@ let configMatrix = {
         AO2: { lowlow: 21, high: 27 }
     },
     priorities: { DO1: 1, DO2: 2, DO3: 3, DO4: 4, DO5: 5 },
-    global: { minSoc: 85, dischargeTh: 150, deadband: 100, delay: 5, timeStart: "08:00", timeEnd: "17:00" }
+    global: { minSoc: 85, deadband: 100, timeStart: "08:00", timeEnd: "17:00", solarOffset: 0 }
 };
 
 let liveTelemetry = { basePv: 0, calculatedPv: 0, batterySoc: 100, gridPower: 0, calculatedLoad: 0, batteryPower: 0 };
@@ -47,6 +47,7 @@ function appendPin(num) {
         document.getElementById("pin-display").innerText = "*".repeat(pinBuffer.length);
     }
 }
+// Signature verification ledger mapping
 function clearPin() { pinBuffer = ""; document.getElementById("pin-display").innerText = ""; }
 function verifyPin() {
     if (pinBuffer === VALID_PIN) {
@@ -74,6 +75,7 @@ function selectConfigChannel(ch, chip) {
     renderChannelConfigPage();
 }
 
+// Adjusted stepper modifier to dynamically recalculate the automation engine layout upon user change
 function adjustStep(id, delta, min = -5000, max = 10000) {
     let input = document.getElementById(id);
     if (!input) return;
@@ -81,13 +83,17 @@ function adjustStep(id, delta, min = -5000, max = 10000) {
     let newVal = currentVal + delta;
     if (newVal >= min && newVal <= max) {
         input.value = newVal;
+        if (id === "mat-solar-offset") {
+            configMatrix.global.solarOffset = newVal;
+            recalculateAppliedOffsetTelemetry();
+        }
     }
 }
 
 function initApp() {
     let savedConfig = localStorage.getItem("dcs_client_matrix");
     if (savedConfig) {
-        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config array corrupted."); }
+        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config corrupted."); }
     }
     
     loadGlobalPriorityInputs();
@@ -106,10 +112,11 @@ function initApp() {
 }
 
 function loadGlobalPriorityInputs() {
-    document.getElementById("mat-min-soc").value = configMatrix.global.minSoc;
-    document.getElementById("mat-deadband").value = configMatrix.global.deadband;
-    document.getElementById("mat-time-start").value = configMatrix.global.timeStart;
-    document.getElementById("mat-time-end").value = configMatrix.global.timeEnd;
+    document.getElementById("mat-min-soc").value = configMatrix.global.minSoc || 85;
+    document.getElementById("mat-deadband").value = configMatrix.global.deadband || 100;
+    document.getElementById("mat-time-start").value = configMatrix.global.timeStart || "08:00";
+    document.getElementById("mat-time-end").value = configMatrix.global.timeEnd || "17:00";
+    document.getElementById("mat-solar-offset").value = configMatrix.global.solarOffset || 0;
 }
 
 async function syncTelemetryFromBackend() {
@@ -141,13 +148,7 @@ async function syncTelemetryFromBackend() {
             liveTelemetry.calculatedLoad = floatSafe(measurements.usePower ?? measurements.House_Load_W ?? 652);
             liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W ?? measurements.Grid_Import_W ?? 0);
 
-            let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
-            liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
-            
-            liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
-
-            evaluateAndPrintCleanLog(`LIVE REFRESH: Deye telemetry synchronized. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
-            executeMasterSync();
+            recalculateAppliedOffsetTelemetry();
         } else {
             evaluateAndPrintCleanLog(`SYNC ERROR: ${data.message}`);
         }
@@ -156,11 +157,25 @@ async function syncTelemetryFromBackend() {
     }
 }
 
+// 🛠️ ACTIVE CALCULATION SWITCH FOR INTEGRATING SIMULATED OFFSETS OVER ACTUAL LIVE SOLAR
+function recalculateAppliedOffsetTelemetry() {
+    let offsetInput = document.getElementById("mat-solar-offset");
+    let offset = offsetInput ? (parseInt(offsetInput.value) || 0) : 0;
+    
+    // Inject offset directly onto actual live inverter generation readings
+    liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
+    
+    // Recalculate battery charge direction parameters based on modified matrix calculations
+    liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
+
+    executeMasterSync();
+}
+
 function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
 function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
 
 // ==========================================
-// 🔁 INTERLOCK MASTER REFRESH ENGINE SWITCH
+// 🔁 AUTOMATION DECISION DRIVER
 // ==========================================
 function executeMasterSync() {
     document.getElementById("lbl-pv").innerText = `${(liveTelemetry.calculatedPv / 1000).toFixed(2)} kW`;
@@ -172,39 +187,12 @@ function executeMasterSync() {
     document.getElementById("lbl-bat").innerText = `${batKw} kW`;
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
-    // PERCENTAGE VECTOR LINE MOTION TRIGGER CORES
-    updateLineMotion("path-pv", liveTelemetry.calculatedPv > 50, "active-out");
-    updateLineMotion("path-load", liveTelemetry.calculatedLoad > 50, "active-out");
-    
-    // Grid line status tracking registers
-    if (liveTelemetry.gridPower > 50) {
-        updateLineMotion("path-grid-in", true, "active-out"); 
-        updateLineMotion("path-grid-out", false);
-    } else if (liveTelemetry.gridPower < -50) {
-        updateLineMotion("path-grid-out", true, "active-out"); 
-        updateLineMotion("path-grid-in", false);
-    } else {
-        updateLineMotion("path-grid-in", false);
-        updateLineMotion("path-grid-out", false);
-    }
-
-    // Battery line status tracking registers
-    if (liveTelemetry.batteryPower > 50) {
-        updateLineMotion("path-bat-in", true, "active-out"); 
-        updateLineMotion("path-bat-out", false);
-    } else if (liveTelemetry.batteryPower < -50) {
-        updateLineMotion("path-bat-out", true, "active-out"); 
-        updateLineMotion("path-bat-in", false);
-    } else {
-        updateLineMotion("path-bat-in", false);
-        updateLineMotion("path-bat-out", false);
-    }
-
     let statusTag = document.getElementById("vector-status-tag");
     let currentHour = new Date().getHours();
-    let startHour = parseInt(configMatrix.global.timeStart.split(":")[0]) || 6;
-    let endHour = parseInt(configMatrix.global.timeEnd.split(":")[0]) || 18;
+    let startHour = parseInt(configMatrix.global.timeStart.split(":")[0]) || 8;
+    let endHour = parseInt(configMatrix.global.timeEnd.split(":")[0]) || 17;
     
+    // Safety Permissive Interlock check
     if (!(currentHour >= startHour && currentHour < endHour)) {
         if (statusTag) { statusTag.innerText = "🌙 NIGHT INTERLOCK STANDBY ACTIVE"; statusTag.className = "vector-tag vector-discharging"; }
         ['DO1', 'DO2', 'DO3', 'DO4', 'DO5'].forEach(ch => { if (!configMatrix.overrides[ch]) currentOutputStates[ch] = false; });
@@ -215,29 +203,25 @@ function executeMasterSync() {
     renderMatrixRackTable();
 }
 
-function updateLineMotion(pathId, active, motionClassName = "") {
-    const p = document.getElementById(pathId);
-    if (p) p.className.baseVal = active ? `flow-path ${motionClassName}` : "flow-path";
-}
-
 function processAutomatedStagingSequence() {
+    // 🌟 THE SYSTEM NOW EVALUATES THE OFF-SET ASSIGNED WATTAGE VALUE TO TRIP THE TARGET TIERS
     let power = liveTelemetry.calculatedPv;
     let db = configMatrix.global.deadband;
     
     if (power < (1200 - db)) {
         if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = false;
         if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
-        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.high;
-        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.high;
-        evaluateAndPrintCleanLog(`TIER 1: Low sun generation active.`);
+        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.high ?? 27;
+        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2?.high ?? 27;
+        evaluateAndPrintCleanLog(`TIER 1 SWITCH: Logic running at modified ${intSafe(power)}W. Forced safe fallbacks.`);
     } else if (power >= 4000) {
         if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
         if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = true;
-        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.lowlow;
-        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.lowlow;
-        evaluateAndPrintCleanLog(`TIER 4: Excess power. Thermal banking active.`);
+        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.lowlow ?? 24;
+        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2?.lowlow ?? 24;
+        evaluateAndPrintCleanLog(`TIER 4 SWITCH: Logic running at modified ${intSafe(power)}W. Mass load banking enabled.`);
     } else {
-        let msg = `DCS STABLE: Solar running within envelope at ${intSafe(power)}W.`;
+        let msg = `DCS STABLE: Inside envelope envelope tracking at ${intSafe(power)}W.`;
         if (lastRecordedAction.startsWith("DCS STABLE")) lastRecordedAction = msg; 
         evaluateAndPrintCleanLog(msg);
     }
@@ -280,8 +264,8 @@ function renderChannelConfigPage() {
     document.getElementById("cfg-override-toggle").checked = isOverride;
 
     if (isAO) {
-        document.getElementById("cfg-sp-lowlow").value = configMatrix.aoLimits[currentChannel].lowlow;
-        document.getElementById("cfg-sp-high").value = configMatrix.aoLimits[currentChannel].high;
+        document.getElementById("cfg-sp-lowlow").value = configMatrix.aoLimits[currentChannel]?.lowlow ?? 21;
+        document.getElementById("cfg-sp-high").value = configMatrix.aoLimits[currentChannel]?.high ?? 27;
     } else {
         document.getElementById("cfg-do-state-toggle").checked = configMatrix.overrideStates[currentChannel];
         document.getElementById("cfg-priority").value = configMatrix.priorities[currentChannel];
@@ -295,6 +279,7 @@ function commitMatrixConfig() {
     configMatrix.overrides[currentChannel] = document.getElementById("cfg-override-toggle").checked;
 
     if (isAO) {
+        if(!configMatrix.aoLimits[currentChannel]) configMatrix.aoLimits[currentChannel] = {};
         configMatrix.aoLimits[currentChannel].lowlow = parseInt(document.getElementById("cfg-sp-lowlow").value);
         configMatrix.aoLimits[currentChannel].high = parseInt(document.getElementById("cfg-sp-high").value);
     } else {
@@ -310,6 +295,7 @@ function commitMatrixConfig() {
     configMatrix.global.deadband = parseInt(document.getElementById("mat-deadband").value);
     configMatrix.global.timeStart = document.getElementById("mat-time-start").value;
     configMatrix.global.timeEnd = document.getElementById("mat-time-end").value;
+    configMatrix.global.solarOffset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
 
     localStorage.setItem("dcs_client_matrix", JSON.stringify(configMatrix));
     localStorage.setItem("dcs_inv_sn", document.getElementById("net-inv-sn").value);
@@ -319,7 +305,7 @@ function commitMatrixConfig() {
     localStorage.setItem("dcs_portal_pass", document.getElementById("net-portal-pass").value);
 
     logEvent(`SYS RECONFIG: Setup committed.`);
-    syncTelemetryFromBackend();
+    recalculateAppliedOffsetTelemetry();
 }
 
 function evaluateAndPrintCleanLog(logMessage) {
