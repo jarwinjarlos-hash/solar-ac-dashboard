@@ -146,7 +146,7 @@ async function syncTelemetryFromBackend() {
             
             liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
 
-            evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry loaded. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
+            evaluateAndPrintCleanLog(`LIVE REFRESH: Deye telemetry synchronized. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
             executeMasterSync();
         } else {
             evaluateAndPrintCleanLog(`SYNC ERROR: ${data.message}`);
@@ -172,28 +172,28 @@ function executeMasterSync() {
     document.getElementById("lbl-bat").innerText = `${batKw} kW`;
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
-    // 🌟 RE-LINKED SEGMENT-ISOLATED LINE MOTION PATHWAYS
+    // PERCENTAGE VECTOR LINE MOTION TRIGGER CORES
     updateLineMotion("path-pv", liveTelemetry.calculatedPv > 50, "active-out");
     updateLineMotion("path-load", liveTelemetry.calculatedLoad > 50, "active-out");
     
-    // Grid Segment Drivers
+    // Grid line status tracking registers
     if (liveTelemetry.gridPower > 50) {
-        updateLineMotion("path-grid-in", true, "active-out"); // Inward flow toward inverter entry point
+        updateLineMotion("path-grid-in", true, "active-out"); 
         updateLineMotion("path-grid-out", false);
     } else if (liveTelemetry.gridPower < -50) {
-        updateLineMotion("path-grid-out", true, "active-out"); // Outward flow toward grid box entry point
+        updateLineMotion("path-grid-out", true, "active-out"); 
         updateLineMotion("path-grid-in", false);
     } else {
         updateLineMotion("path-grid-in", false);
         updateLineMotion("path-grid-out", false);
     }
 
-    // Battery Segment Drivers
+    // Battery line status tracking registers
     if (liveTelemetry.batteryPower > 50) {
-        updateLineMotion("path-bat-in", true, "active-out"); // Outward flow toward battery box entry point (Charging)
+        updateLineMotion("path-bat-in", true, "active-out"); 
         updateLineMotion("path-bat-out", false);
     } else if (liveTelemetry.batteryPower < -50) {
-        updateLineMotion("path-bat-out", true, "active-out"); // Inward flow toward inverter entry point (Discharging)
+        updateLineMotion("path-bat-out", true, "active-out"); 
         updateLineMotion("path-bat-in", false);
     } else {
         updateLineMotion("path-bat-in", false);
