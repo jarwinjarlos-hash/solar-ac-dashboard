@@ -87,7 +87,7 @@ function adjustStep(id, delta, min = -5000, max = 10000) {
 function initApp() {
     let savedConfig = localStorage.getItem("dcs_client_matrix");
     if (savedConfig) {
-        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config corrupted."); }
+        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config array corrupted."); }
     }
     
     loadGlobalPriorityInputs();
@@ -112,6 +112,9 @@ function loadGlobalPriorityInputs() {
     document.getElementById("mat-time-end").value = configMatrix.global.timeEnd;
 }
 
+// ==========================================
+// 📡 SYNC AND DIRECT REGISTERS RECTIFICATION LAYER
+// ==========================================
 async function syncTelemetryFromBackend() {
     const invSn = document.getElementById("net-inv-sn").value;
     const appId = document.getElementById("net-app-id").value;
@@ -130,38 +133,46 @@ async function syncTelemetryFromBackend() {
             body: JSON.stringify(payload)
         });
 
-        if (!response.ok) throw new Error(`Server Status: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP Server Error: ${response.status}`);
         const data = await response.json();
 
         if (data.status === "success") {
             const measurements = data.measurements || data.telemetry || {};
             
+            // Map exact backend telemetry parameters based on previous validation loop
             liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W ?? measurements.PV_Power_W ?? 0);
             liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC ?? 100);
-            liveTelemetry.calculatedLoad = floatSafe(measurements.usePower ?? measurements.House_Load_W ?? 652);
+            liveTelemetry.calculatedLoad = floatSafe(measurements.usePower ?? 652);
+            
+            // Extract Grid power dynamically to determine directional matrices
             liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W ?? measurements.Grid_Import_W ?? 0);
 
             let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
             liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
             
+            // Recompute balance matrix vector cleanly based on new parameters
             liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
 
-            evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry loaded. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
+            evaluateAndPrintCleanLog(`LIVE REFRESH: Deye telemetry synchronized. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
             executeMasterSync();
         } else {
-            evaluateAndPrintCleanLog(`SYNC ERROR: ${data.message}`);
+            evaluateAndPrintCleanLog(`SYNC ERROR: Backend failure response: ${data.message}`);
         }
     } catch (e) {
-        evaluateAndPrintCleanLog(`LINK TIMEOUT: Server linking...`);
+        evaluateAndPrintCleanLog(`LINK ERROR: D DCS Link Layer unstable.`);
     }
 }
 
+function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
+function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
+
 // ==========================================
-// 🔁 INTERLOCK MASTER REGISTER SYNC DRIVER
+// 🔁 ENGINE CALCULATE INTERLOCK & PATH DRIVERS
 // ==========================================
 function executeMasterSync() {
+    // 1. DCS UI text fields updates track
     document.getElementById("lbl-pv").innerText = `${(liveTelemetry.calculatedPv / 1000).toFixed(2)} kW`;
-    document.getElementById("lbl-soc").innerText = `${liveTelemetry.batterySoc}%`;
+    document.getElementById("lbl-soc").innerText = `${liveTelemetry.batterySoc}% SOC`;
     document.getElementById("lbl-grid").innerText = `${liveTelemetry.gridPower} W`;
     document.getElementById("lbl-load").innerText = `${liveTelemetry.calculatedLoad} W`;
     
@@ -169,34 +180,35 @@ function executeMasterSync() {
     document.getElementById("lbl-bat").innerText = `${liveTelemetry.batteryPower < 0 ? '-' : ''}${batKw} kW`;
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
-    // SVG line path and particle tracking updates
-    toggleFlowLineAnimation("path-pv", "bubble-pv", liveTelemetry.calculatedPv > 50, "active-out");
-    toggleFlowLineAnimation("path-load", "bubble-load", liveTelemetry.calculatedLoad > 50, "active-out");
+    // 🌟 ACTIVE DASHED PATHWAY DRIVE MATRICES (tracks `image_14.png` solid pipeline model logic)
+    // Applied symmetric animation state deadbands to stop pathways from flickering at zero
     
-    // Grid line flows directional matrices
+    updateDashedPathwayState("path-pv", liveTelemetry.calculatedPv > 50, "active-out");
+    updateDashedPathwayState("path-load", liveTelemetry.calculatedLoad > 50, "active-out");
+
+    // Grid pathways drivers
     if (liveTelemetry.gridPower > 50) {
-        toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", true, "active-out"); 
-        toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", false);
+        // Power importing from utility ->moves backward towards Inverter node
+        updateDashedPathwayState("path-grid", true, "active-in");
     } else if (liveTelemetry.gridPower < -50) {
-        toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", true, "active-out"); 
-        toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", false);
+        // Power exporting to utility ->moves forward outward from Inverter core node
+        updateDashedPathwayState("path-grid", true, "active-out"); 
     } else {
-        toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", false);
-        toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", false);
+        updateDashedPathwayState("path-grid", false);
     }
 
-    // Battery line flows directional matrices
+    // Battery pathways balance drivers
     if (liveTelemetry.batteryPower > 50) {
-        toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", true, "active-out"); 
-        toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", false);
+        // Power charging the pack ->moves outward towards Battery Unit node
+        updateDashedPathwayState("path-bat", true, "active-out");
     } else if (liveTelemetry.batteryPower < -50) {
-        toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", true, "active-out"); 
-        toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", false);
+        // Power discharging from pack ->moves backward outward from unit towards core node
+        updateDashedPathwayState("path-bat", true, "active-in"); 
     } else {
-        toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", false);
-        toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", false);
+        updateDashedPathwayState("path-bat", false);
     }
 
+    // 3. Output logic staging sequence Track
     let statusTag = document.getElementById("vector-status-tag");
     let currentHour = new Date().getHours();
     let startHour = parseInt(configMatrix.global.timeStart.split(":")[0]) || 6;
@@ -212,22 +224,11 @@ function executeMasterSync() {
     renderMatrixRackTable();
 }
 
-function toggleFlowLineAnimation(lineId, bubbleId, active, className = "") {
-    const p = document.getElementById(lineId);
-    const b = document.getElementById(bubbleId);
-    if (!p || !b) return;
-    
-    if (active) {
-        p.className.baseVal = `flow-path ${className}`;
-        b.className.baseVal = "animated-bubble active";
-    } else {
-        p.className.baseVal = "flow-path";
-        b.className.baseVal = "animated-bubble";
-    }
+function updateDashedPathwayState(pathId, active, className = "") {
+    const p = document.getElementById(pathId);
+    if (!p) return;
+    p.className.baseVal = active ? `flow-path ${className}` : "flow-path";
 }
-
-function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
-function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
 
 function processAutomatedStagingSequence() {
     let power = liveTelemetry.calculatedPv;
@@ -238,15 +239,15 @@ function processAutomatedStagingSequence() {
         if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.high;
         if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.high;
-        evaluateAndPrintCleanLog(`TIER 1: Low sun generation active.`);
+        evaluateAndPrintCleanLog(`TIER 1 (LOW SUN): Generation ${intSafe(power)}W below threshold. Holding High SP profile.`);
     } else if (power >= 4000) {
         if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
         if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = true;
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.lowlow;
         if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.lowlow;
-        evaluateAndPrintCleanLog(`TIER 4: Excess power. Thermal banking active.`);
+        evaluateAndPrintCleanLog(`TIER 4 (MASSIVE EXCESS): High production at ${intSafe(power)}W. Virtual thermal banking enabled.`);
     } else {
-        let msg = `DCS STABLE: Solar running within envelope at ${intSafe(power)}W.`;
+        let msg = `DCS STABLE: Solar plant inside operational window at ${intSafe(power)}W. Keeping auto status constant.`;
         if (lastRecordedAction.startsWith("DCS STABLE")) lastRecordedAction = msg; 
         evaluateAndPrintCleanLog(msg);
     }
@@ -268,7 +269,16 @@ function renderMatrixRackTable() {
         let modeBadge = isOverride ? `<span class="badge badge-hand">HAND</span>` : `<span class="badge badge-auto">AUTO</span>`;
         let seqDisplay = isAO ? "—" : `P${configMatrix.priorities[ch]}`;
 
-        tbody.innerHTML += `<tr><td>${ch}</td><td>${name}</td><td>${stateBadge}</td><td><b>${setpDisplay}</b></td><td>${modeBadge}</td><td>${seqDisplay}</td></tr>`;
+        tbody.innerHTML += `
+            <tr>
+                <td style="font-weight:bold; color:var(--accent-blue);">${ch}</td>
+                <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis;">${name}</td>
+                <td>${stateBadge}</td>
+                <td><span style="font-weight:bold;">${setpDisplay}</span></td>
+                <td>${modeBadge}</td>
+                <td><span style="color:var(--text-sub);">${seqDisplay}</span></td>
+            </tr>
+        `;
     });
 }
 
@@ -282,7 +292,7 @@ function toggleOverrideUI() {
 
 function renderChannelConfigPage() {
     const isAO = currentChannel.startsWith('AO');
-    document.getElementById("config-target-title").innerText = `${currentChannel} Settings`;
+    document.getElementById("config-target-title").innerText = `${currentChannel} Hardware Settings`;
     document.getElementById("cfg-custom-name").value = configMatrix.customNames[currentChannel];
     
     const isOverride = configMatrix.overrides[currentChannel];
@@ -327,7 +337,7 @@ function commitMatrixConfig() {
     localStorage.setItem("dcs_portal_user", document.getElementById("net-portal-user").value);
     localStorage.setItem("dcs_portal_pass", document.getElementById("net-portal-pass").value);
 
-    logEvent(`SYS RECONFIG: Setup committed.`);
+    logEvent(`SYS RECONFIG: Setup committed. Profile synced.`);
     syncTelemetryFromBackend();
 }
 
@@ -342,5 +352,6 @@ function logEvent(desc) {
     if (!container) return;
     if (container.innerHTML.includes("Initializing matrix loop")) container.innerHTML = "";
     const timestamp = new Date().toLocaleTimeString();
-    container.innerHTML = `<div class="event-row"><div class="event-time">[${timestamp}]</div><div class="event-desc">${desc}</div></div>` + container.innerHTML;
+    const row = `<div class="event-row"><div class="event-time">[${timestamp}]</div><div class="event-desc">${desc}</div></div>`;
+    container.innerHTML = row + container.innerHTML;
 }
