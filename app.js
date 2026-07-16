@@ -1,5 +1,5 @@
 // =================================================================
-// ☀️ CLEAN DEYE DCS AUTOMATION ENGINE (app.js) - RELEASE STAGE BETA 6.1
+// ☀️ CLEAN DEYE DCS AUTOMATION ENGINE (app.js) - RELEASE STAGE BETA 6.4
 // =================================================================
 
 let currentChannel = 'AO1';
@@ -40,7 +40,7 @@ let configMatrix = {
     }
 };
 
-let liveTelemetry = { basePv: 0, calculatedPv: 0, batterySoc: 100, gridPower: 0, calculatedLoad: 0, batteryPower: 0 };
+let liveTelemetry = { basePv: 0, calculatedPv: 0, batterySoc: 100, gridPower: 0, calculatedLoad: 0, batteryPower: 0, backendBatteryPower: 0 };
 let currentOutputStates = { AO1: 24, AO2: 24, AO3: 26, AO4: 26, AO5: 26, DO1: false, DO2: false, DO3: false, DO4: false, DO5: false };
 let lastRecordedAction = "";
 
@@ -172,6 +172,9 @@ async function syncTelemetryFromBackend() {
             liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC ?? 100);
             liveTelemetry.calculatedLoad = floatSafe(measurements.usePower ?? measurements.House_Load_W ?? 652);
             liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W ?? measurements.Grid_Import_W ?? 0);
+            
+            // Collect the backend's native or calculated battery flow
+            liveTelemetry.backendBatteryPower = floatSafe(measurements.Battery_Power_W ?? 0);
 
             recalculateAppliedOffsetTelemetry();
         } else {
@@ -189,8 +192,13 @@ function recalculateAppliedOffsetTelemetry() {
     // Apply offset simulation directly to PV generation values
     liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
     
-    // Calculate precise battery charging flow rate
-    liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
+    // Calculate precise battery power flow (Sign convention: positive is discharging, negative is charging)
+    // Formula: BatteryFlow = Load + Grid - Solar
+    if (offset === 0 && liveTelemetry.backendBatteryPower !== 0) {
+        liveTelemetry.batteryPower = liveTelemetry.backendBatteryPower;
+    } else {
+        liveTelemetry.batteryPower = liveTelemetry.calculatedLoad + liveTelemetry.gridPower - liveTelemetry.calculatedPv;
+    }
     
     executeMasterSync();
 }
@@ -207,8 +215,10 @@ function executeMasterSync() {
     document.getElementById("lbl-grid").innerText = `${liveTelemetry.gridPower} W`;
     document.getElementById("lbl-load").innerText = `${liveTelemetry.calculatedLoad} W`;
     
-    let batKw = (Math.abs(liveTelemetry.batteryPower) / 1000).toFixed(2);
-    document.getElementById("lbl-bat").innerText = `${batKw} kW`;
+    // 🛠️ Signs are preserved (+ for discharge, - for charge)
+    let batValue = liveTelemetry.batteryPower / 1000;
+    document.getElementById("lbl-bat").innerText = `${batValue.toFixed(2)} kW`;
+    
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
     let statusTag = document.getElementById("vector-status-tag");
@@ -233,7 +243,7 @@ function processAutomatedStagingSequence() {
     let power = liveTelemetry.calculatedPv;
     let grid = liveTelemetry.gridPower;
     let batSoc = liveTelemetry.batterySoc;
-    let batFlow = liveTelemetry.batteryPower; // Positive = Charging, Negative = Discharging
+    let batFlow = liveTelemetry.batteryPower; // Positive = Discharging, Negative = Charging
     
     // Dynamic Parameter Registrations from UI
     let minSoc = configMatrix.global.minSoc || 85;
@@ -246,12 +256,13 @@ function processAutomatedStagingSequence() {
     // ----------------------------------------------------
     // 🛡️ INTERLOCK 1: DAYTIME BATTERY DISCHARGE SHEDDING
     // ----------------------------------------------------
-    if (batFlow < -50) {
+    // Since positive batFlow means DISCHARGING:
+    if (batFlow > 50) {
         if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = false;
         if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.high ?? 27;
         if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2?.high ?? 27;
-        evaluateAndPrintCleanLog(`[⚠️ SHEDDING ACTIVE] Cloud cover detected. Battery discharging at ${Math.abs(intSafe(batFlow))}W. Shedding P1 loads to conserve battery.`);
+        evaluateAndPrintCleanLog(`[⚠️ SHEDDING ACTIVE] Cloud cover detected. Battery discharging at ${intSafe(batFlow)}W. Shedding P1 loads to conserve battery.`);
         return; 
     }
 
@@ -268,11 +279,11 @@ function processAutomatedStagingSequence() {
     // ----------------------------------------------------
     // 🔋 UNTHROTTLING DETECTOR: BATTERY CHARGE RATE STEP
     // ----------------------------------------------------
-    // If battery is charging and rate exceeds user's charge trigger:
-    if (batSoc >= minSoc && batFlow >= chargeTrigger) {
+    // Since negative batFlow means CHARGING, we check if the charging rate (-batFlow) is greater than trigger:
+    if (batSoc >= minSoc && batFlow <= -chargeTrigger) {
         if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.lowlow ?? 21;
-        evaluateAndPrintCleanLog(`[🚀 UNTHROTTLE ACTIVE] Battery charging healthy at +${intSafe(batFlow)}W. Activating Priority 1 AC to unthrottle MPPT.`);
+        evaluateAndPrintCleanLog(`[🚀 UNTHROTTLE ACTIVE] Battery charging healthy at ${intSafe(Math.abs(batFlow))}W. Activating Priority 1 AC to unthrottle MPPT.`);
         return;
     }
 
