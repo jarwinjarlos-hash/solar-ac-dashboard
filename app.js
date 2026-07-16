@@ -144,7 +144,6 @@ async function syncTelemetryFromBackend() {
             let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
             liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
             
-            // Recompute balance matrix vector directions cleanly
             liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
 
             evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry loaded. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
@@ -156,9 +155,6 @@ async function syncTelemetryFromBackend() {
         evaluateAndPrintCleanLog(`LINK TIMEOUT: Server linking...`);
     }
 }
-
-function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
-function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
 
 // ==========================================
 // 🔁 INTERLOCK MASTER REGISTER SYNC DRIVER
@@ -173,28 +169,28 @@ function executeMasterSync() {
     document.getElementById("lbl-bat").innerText = `${liveTelemetry.batteryPower < 0 ? '-' : ''}${batKw} kW`;
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
-    // 🌟 ACTIVE VECTOR FLUID BUBBLE PATH CALCULATIONS
+    // SVG line path and particle tracking updates
     toggleFlowLineAnimation("path-pv", "bubble-pv", liveTelemetry.calculatedPv > 50, "active-out");
     toggleFlowLineAnimation("path-load", "bubble-load", liveTelemetry.calculatedLoad > 50, "active-out");
     
-    // Grid pathways animations drivers
+    // Grid line flows directional matrices
     if (liveTelemetry.gridPower > 50) {
-        toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", true, "active-out"); // Import
+        toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", true, "active-out"); 
         toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", false);
     } else if (liveTelemetry.gridPower < -50) {
-        toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", true, "active-out"); // Export
+        toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", true, "active-out"); 
         toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", false);
     } else {
         toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", false);
         toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", false);
     }
 
-    // Battery balance pathways animations drivers
+    // Battery line flows directional matrices
     if (liveTelemetry.batteryPower > 50) {
-        toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", true, "active-out"); // Charging direction
+        toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", true, "active-out"); 
         toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", false);
     } else if (liveTelemetry.batteryPower < -50) {
-        toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", true, "active-out"); // Discharging direction
+        toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", true, "active-out"); 
         toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", false);
     } else {
         toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", false);
@@ -229,6 +225,9 @@ function toggleFlowLineAnimation(lineId, bubbleId, active, className = "") {
         b.className.baseVal = "animated-bubble";
     }
 }
+
+function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
+function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
 
 function processAutomatedStagingSequence() {
     let power = liveTelemetry.calculatedPv;
