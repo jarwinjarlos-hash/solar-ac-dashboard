@@ -7,7 +7,7 @@ let pinBuffer = "";
 const VALID_PIN = "1981";
 
 // 🌟 REPLACE WITH YOUR ACTUAL ACTIVE RENDER WEB SERVICE URL
-const RENDER_BACKEND_URL = "https://your-solar-ac-bridge.onrender.com";
+const RENDER_BACKEND_URL = "https://solar-ac-bridge.onrender.com/sync";
 
 let configMatrix = {
     customNames: {
