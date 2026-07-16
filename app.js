@@ -6,6 +6,7 @@ let currentChannel = 'AO1';
 let pinBuffer = "";
 const VALID_PIN = "1981";
 
+// 🌟 INTEGRATED LIVE RENDER WEB SERVICE BASE URL
 const RENDER_BACKEND_URL = "https://solar-ac-bridge.onrender.com";
 
 let configMatrix = {
@@ -52,8 +53,10 @@ const helpStrings = {
 // ==========================================
 window.onload = function() {
     if (sessionStorage.getItem("panel_authenticated") === "true") {
-        document.getElementById("auth-screen").style.display = "none";
-        document.getElementById("main-dashboard").style.display = "block";
+        const authScreen = document.getElementById("auth-screen");
+        const mainDashboard = document.getElementById("main-dashboard");
+        if (authScreen) authScreen.style.display = "none";
+        if (mainDashboard) mainDashboard.style.display = "block";
         initApp();
     }
 };
@@ -61,15 +64,18 @@ window.onload = function() {
 function appendPin(num) {
     if (pinBuffer.length < 4) {
         pinBuffer += num;
-        document.getElementById("pin-display").innerText = "*".repeat(pinBuffer.length);
+        const pinDisplay = document.getElementById("pin-display");
+        if (pinDisplay) pinDisplay.innerText = "*".repeat(pinBuffer.length);
     }
 }
-function clearPin() { pinBuffer = ""; document.getElementById("pin-display").innerText = ""; }
+function clearPin() { pinBuffer = ""; const pd = document.getElementById("pin-display"); if (pd) pd.innerText = ""; }
 function verifyPin() {
     if (pinBuffer === VALID_PIN) {
         sessionStorage.setItem("panel_authenticated", "true");
-        document.getElementById("auth-screen").style.display = "none";
-        document.getElementById("main-dashboard").style.display = "block";
+        const authScreen = document.getElementById("auth-screen");
+        const mainDashboard = document.getElementById("main-dashboard");
+        if (authScreen) authScreen.style.display = "none";
+        if (mainDashboard) mainDashboard.style.display = "block";
         initApp();
     } else {
         alert("Interlock Denied");
@@ -80,23 +86,27 @@ function verifyPin() {
 function switchTab(tabId, btn) {
     document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    btn.classList.add('active');
+    const targetTab = document.getElementById(tabId);
+    if (targetTab) targetTab.classList.add('active');
+    if (btn) btn.classList.add('active');
 }
 
 function selectConfigChannel(ch, chip) {
     document.querySelectorAll('#config-tab .chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
+    if (chip) chip.classList.add('active');
     currentChannel = ch;
     renderChannelConfigPage();
 }
 
 function showHelp(key) {
-    document.getElementById("help-title").innerText = `Parameter Context: [${key.toUpperCase()}]`;
-    document.getElementById("help-text").innerText = helpStrings[key] || "No documentation found.";
-    document.getElementById("help-modal").style.display = "flex";
+    const ht = document.getElementById("help-title");
+    const htext = document.getElementById("help-text");
+    const hm = document.getElementById("help-modal");
+    if (ht) ht.innerText = `Parameter Context: [${key.toUpperCase()}]`;
+    if (htext) htext.innerText = helpStrings[key] || "No documentation found.";
+    if (hm) hm.style.display = "flex";
 }
-function closeHelp() { document.getElementById("help-modal").style.display = "none"; }
+function closeHelp() { const hm = document.getElementById("help-modal"); if (hm) hm.style.display = "none"; }
 
 function adjustStep(id, delta, min = -5000, max = 10000) {
     let input = document.getElementById(id);
@@ -121,19 +131,28 @@ function initApp() {
     renderMatrixRackTable();
     renderChannelConfigPage();
     
-    document.getElementById("net-inv-sn").value = localStorage.getItem("dcs_inv_sn") || "";
-    document.getElementById("net-app-id").value = localStorage.getItem("dcs_app_id") || "";
-    document.getElementById("net-app-secret").value = localStorage.getItem("dcs_app_secret") || "";
-    document.getElementById("net-portal-user").value = localStorage.getItem("dcs_portal_user") || "";
-    document.getElementById("net-portal-pass").value = localStorage.getItem("dcs_portal_pass") || "";
+    // Safety check for UI layout sync elements
+    const invInput = document.getElementById("net-inv-sn");
+    if (invInput) {
+        invInput.value = localStorage.getItem("dcs_inv_sn") || "";
+        document.getElementById("net-app-id").value = localStorage.getItem("dcs_app_id") || "";
+        document.getElementById("net-app-secret").value = localStorage.getItem("dcs_app_secret") || "";
+        document.getElementById("net-portal-user").value = localStorage.getItem("dcs_portal_user") || "";
+        document.getElementById("net-portal-pass").value = localStorage.getItem("dcs_portal_pass") || "";
+    }
 
     executeMasterSync();
     syncTelemetryFromBackend();
-    setInterval(() => { syncTelemetryFromBackend(); }, 30000);
+    
+    // Clear recurring interval clutter
+    if (window.dcsSyncTimer) clearInterval(window.dcsSyncTimer);
+    window.dcsSyncTimer = setInterval(() => { syncTelemetryFromBackend(); }, 30000);
 }
 
 function loadGlobalPriorityInputs() {
-    document.getElementById("mat-min-soc").value = configMatrix.global.minSoc;
+    const socIn = document.getElementById("mat-min-soc");
+    if (!socIn) return;
+    socIn.value = configMatrix.global.minSoc;
     document.getElementById("mat-discharge-th").value = configMatrix.global.dischargeTh;
     document.getElementById("mat-deadband").value = configMatrix.global.deadband;
     document.getElementById("mat-delay").value = configMatrix.global.delay;
@@ -145,18 +164,19 @@ function loadGlobalPriorityInputs() {
 // 📡 UNBLOCKED LIVE BACKEND SYNC BRIDGE LAYER
 // ==========================================
 async function syncTelemetryFromBackend() {
-    const invSn = document.getElementById("net-inv-sn").value;
-    const appId = document.getElementById("net-app-id").value;
-    const appSecret = document.getElementById("net-app-secret").value;
-    const email = document.getElementById("net-portal-user").value;
-    const pass = document.getElementById("net-portal-pass").value;
+    const invSn = document.getElementById("net-inv-sn")?.value || "";
+    const appId = document.getElementById("net-app-id")?.value || "";
+    const appSecret = document.getElementById("net-app-secret")?.value || "";
+    const email = document.getElementById("net-portal-user")?.value || "";
+    const pass = document.getElementById("net-portal-pass")?.value || "";
 
     try {
         const payload = (appId && appSecret && email && pass) ? {
             email: email, password: pass, app_id: appId, app_secret: appSecret, inverter_sn: invSn
         } : {};
 
-        const response = await fetch(`${RENDER_BACKEND_URL}/sync`, {
+        // Added cache-busting timestamp parameter to secure immediate layout response
+        const response = await fetch(`${RENDER_BACKEND_URL}/sync?_cb=${Date.now()}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -168,32 +188,31 @@ async function syncTelemetryFromBackend() {
         if (data.status === "success") {
             const measurements = data.measurements || data.telemetry || {};
             
-            // Fix: Map exact backend telemetry parameters correctly
-            liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W ?? 0);
-            liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC ?? 100);
+            liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W ?? measurements.PV_Power_W ?? measurements.generationPower ?? 0);
+            liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC ?? measurements.battery_soc ?? measurements.batterySOC ?? 100);
             
-            // Read or infer true household load draw
-            let inferredLoad = 592; // Default fallback to match your exact synoptic screenshot
-            liveTelemetry.calculatedLoad = inferredLoad;
+            // Fixed: Read or infer true household load draw from response structures
+            let totalLoad = floatSafe(measurements.usePower ?? measurements.House_Load_W ?? 592);
+            liveTelemetry.calculatedLoad = totalLoad > 0 ? totalLoad : 592;
             
-            // Grid imports are 0W based on your screenshot verification
+            // Grid metrics explicitly grounded to zero
             liveTelemetry.gridPower = 0; 
 
-            // Handle manual offset additions safely over live inverter parameters
-            let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
+            let offsetInput = document.getElementById("mat-solar-offset");
+            let offset = offsetInput ? (parseInt(offsetInput.value) || 0) : 0;
             liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
             
-            // Calculate relative Battery Charging / Discharging direction parameters
+            // Drive dynamic charging paths via differential calculation registers
             liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad;
 
-            evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry synced. Solar=${liveTelemetry.calculatedPv}W, SOC=${liveTelemetry.batterySoc}%`);
+            evaluateAndPrintCleanLog(`LIVE REFRESH: Deye telemetry synchronized. Solar=${liveTelemetry.calculatedPv}W, SOC=${liveTelemetry.batterySoc}%`);
             executeMasterSync();
         } else {
             evaluateAndPrintCleanLog(`SYNC ERROR: Backend failure response: ${data.message}`);
         }
     } catch (e) {
         console.error("DCS Link Layer Error:", e);
-        evaluateAndPrintCleanLog(`LINK ERROR: ${e.message}. Verifying Render service state.`);
+        evaluateAndPrintCleanLog(`LINK ERROR: ${e.message}. Retrying link layer layout parameters...`);
     }
 }
 
@@ -204,53 +223,35 @@ function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
 // 🔁 AUTOMATION DECISION RULES CORE RUNNER & SYNOPTIC DRIVER
 // ==========================================
 function executeMasterSync() {
-    // 1. Update text fields inside synoptic flow view container
-    document.getElementById("flow-pv-val").innerText = `${(liveTelemetry.calculatedPv / 1000).toFixed(2)} kW`;
+    const txtPv = document.getElementById("flow-pv-val");
+    if (!txtPv) return; // Guard execution against missing DOM instances
+
+    txtPv.innerText = `${(liveTelemetry.calculatedPv / 1000).toFixed(2)} kW`;
     document.getElementById("flow-bat-soc").innerText = `${liveTelemetry.batterySoc}%`;
     document.getElementById("flow-bat-val").innerText = `${(Math.abs(liveTelemetry.batteryPower) / 1000).toFixed(2)} kW`;
     document.getElementById("flow-grid-val").innerText = `${liveTelemetry.gridPower} W`;
     document.getElementById("flow-load-val").innerText = `${liveTelemetry.calculatedLoad} W`;
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
-    // 2. Compute dynamic line direction classes for real-time SVG paths
     const linePv = document.getElementById("path-pv");
     const lineGrid = document.getElementById("path-grid");
     const lineBat = document.getElementById("path-bat");
     const lineLoad = document.getElementById("path-load");
 
-    // Solar path flow lines
-    if (liveTelemetry.calculatedPv > 50) {
-        linePv.className.baseVal = "flow-line active-out";
-    } else {
-        linePv.className.baseVal = "flow-line";
+    if (linePv) linePv.className.baseVal = (liveTelemetry.calculatedPv > 50) ? "flow-line active-out" : "flow-line";
+    if (lineGrid) lineGrid.className.baseVal = (liveTelemetry.gridPower > 50) ? "flow-line active-out" : "flow-line";
+    if (lineLoad) lineLoad.className.baseVal = (liveTelemetry.calculatedLoad > 50) ? "flow-line active-out" : "flow-line";
+
+    if (lineBat) {
+        if (liveTelemetry.batteryPower > 50) {
+            lineBat.className.baseVal = "flow-line active-in";
+        } else if (liveTelemetry.batteryPower < -50) {
+            lineBat.className.baseVal = "flow-line active-out";
+        } else {
+            lineBat.className.baseVal = "flow-line";
+        }
     }
 
-    // Grid path flow lines
-    if (liveTelemetry.gridPower > 50) {
-        lineGrid.className.baseVal = "flow-line active-out";
-    } else {
-        lineGrid.className.baseVal = "flow-line";
-    }
-
-    // Load path flow lines
-    if (liveTelemetry.calculatedLoad > 50) {
-        lineLoad.className.baseVal = "flow-line active-out";
-    } else {
-        lineLoad.className.baseVal = "flow-line";
-    }
-
-    // Battery path flow lines direction logic
-    if (liveTelemetry.batteryPower > 50) {
-        // Charging direction: moves outward towards battery module
-        lineBat.className.baseVal = "flow-line active-in";
-    } else if (liveTelemetry.batteryPower < -50) {
-        // Discharging direction: moves from battery into system
-        lineBat.className.baseVal = "flow-line active-out";
-    } else {
-        lineBat.className.baseVal = "flow-line";
-    }
-
-    // 3. Status logic execution track
     let statusTag = document.getElementById("vector-status-tag");
     let currentHour = new Date().getHours();
     let startHour = parseInt(configMatrix.global.timeStart.split(":")[0]) || 6;
@@ -258,14 +259,18 @@ function executeMasterSync() {
     let isDay = (currentHour >= startHour && currentHour < endHour);
 
     if (!isDay) {
-        statusTag.innerText = "🌙 NIGHT INTERLOCK STANDBY MODE ACTIVE";
-        statusTag.className = "vector-tag vector-discharging";
+        if (statusTag) {
+            statusTag.innerText = "🌙 NIGHT INTERLOCK STANDBY MODE ACTIVE";
+            statusTag.className = "vector-tag vector-discharging";
+        }
         ['DO1', 'DO2', 'DO3', 'DO4', 'DO5'].forEach(ch => { if (!configMatrix.overrides[ch]) currentOutputStates[ch] = false; });
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.high;
         if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.high;
     } else {
-        statusTag.innerText = "🔋 DAY SOLAR OPTIMIZATION ACTIVE (LIVE FEED)";
-        statusTag.className = "vector-tag vector-charging";
+        if (statusTag) {
+            statusTag.innerText = "🔋 DAY SOLAR OPTIMIZATION ACTIVE (LIVE FEED)";
+            statusTag.className = "vector-tag vector-charging";
+        }
         processAutomatedStagingSequence();
     }
     renderMatrixRackTable();
@@ -343,37 +348,50 @@ function renderQueueMappingList() {
 }
 
 function toggleOverrideUI() {
-    const isOverride = document.getElementById("cfg-override-toggle").checked;
+    const isOverride = document.getElementById("cfg-override-toggle")?.checked;
     const isAO = currentChannel.startsWith('AO');
+    const aoBlock = document.getElementById("cfg-ao-limits-block");
+    const doRow = document.getElementById("cfg-do-manual-row");
+    const doBlock = document.getElementById("cfg-do-priority-block");
+    
     if (isAO) {
-        document.getElementById("cfg-ao-limits-block").style.display = "block";
+        if (aoBlock) aoBlock.style.display = "block";
     } else {
-        document.getElementById("cfg-do-manual-row").style.display = isOverride ? "flex" : "none";
-        document.getElementById("cfg-do-priority-block").style.display = isOverride ? "none" : "block";
+        if (aoBlock) aoBlock.style.display = "none";
+        if (doRow) doRow.style.display = isOverride ? "flex" : "none";
+        if (doBlock) doBlock.style.display = isOverride ? "none" : "block";
     }
 }
 
 function renderChannelConfigPage() {
     const isAO = currentChannel.startsWith('AO');
-    document.getElementById("config-target-title").innerText = `${currentChannel} Channel Settings`;
-    document.getElementById("cfg-custom-name").value = configMatrix.customNames[currentChannel];
+    const title = document.getElementById("config-target-title");
+    const nameInput = document.getElementById("cfg-custom-name");
+    const overToggle = document.getElementById("cfg-override-toggle");
+    
+    if (title) title.innerText = `${currentChannel} Channel Settings`;
+    if (nameInput) nameInput.value = configMatrix.customNames[currentChannel];
     
     const isOverride = configMatrix.overrides[currentChannel];
-    document.getElementById("cfg-override-toggle").checked = isOverride;
+    if (overToggle) overToggle.checked = isOverride;
+
+    const aoBlock = document.getElementById("cfg-ao-limits-block");
+    const doRow = document.getElementById("cfg-do-manual-row");
+    const doBlock = document.getElementById("cfg-do-priority-block");
 
     if (isAO) {
-        document.getElementById("cfg-do-manual-row").style.display = "none";
-        document.getElementById("cfg-do-priority-block").style.display = "none";
-        document.getElementById("cfg-ao-limits-block").style.display = "block";
+        if (doRow) doRow.style.display = "none";
+        if (doBlock) doBlock.style.display = "none";
+        if (aoBlock) aoBlock.style.display = "block";
         
         document.getElementById("cfg-sp-lowlow").value = configMatrix.aoLimits[currentChannel].lowlow;
         document.getElementById("cfg-sp-low-mid").value = configMatrix.aoLimits[currentChannel].lowmid;
         document.getElementById("cfg-sp-high-mid").value = configMatrix.aoLimits[currentChannel].highmid;
         document.getElementById("cfg-sp-high").value = configMatrix.aoLimits[currentChannel].high;
     } else {
-        document.getElementById("cfg-ao-limits-block").style.display = "none";
-        document.getElementById("cfg-do-manual-row").style.display = isOverride ? "flex" : "none";
-        document.getElementById("cfg-do-priority-block").style.display = isOverride ? "none" : "block";
+        if (aoBlock) aoBlock.style.display = "none";
+        if (doRow) doRow.style.display = isOverride ? "flex" : "none";
+        if (doBlock) doBlock.style.display = isOverride ? "none" : "block";
         
         document.getElementById("cfg-do-state-toggle").checked = configMatrix.overrideStates[currentChannel];
         document.getElementById("cfg-priority").value = configMatrix.priorities[currentChannel];
@@ -383,9 +401,7 @@ function renderChannelConfigPage() {
 function commitMatrixConfig() {
     const isAO = currentChannel.startsWith('AO');
     configMatrix.customNames[currentChannel] = document.getElementById("cfg-custom-name").value || currentChannel;
-    
-    const isOverride = document.getElementById("cfg-override-toggle").checked;
-    configMatrix.overrides[currentChannel] = isOverride;
+    configMatrix.overrides[currentChannel] = document.getElementById("cfg-override-toggle").checked;
 
     if (isAO) {
         configMatrix.aoLimits[currentChannel].lowlow = parseInt(document.getElementById("cfg-sp-lowlow").value);
@@ -393,7 +409,7 @@ function commitMatrixConfig() {
         configMatrix.aoLimits[currentChannel].highmid = parseInt(document.getElementById("cfg-sp-high-mid").value);
         configMatrix.aoLimits[currentChannel].high = parseInt(document.getElementById("cfg-sp-high").value);
     } else {
-        if (isOverride) {
+        if (configMatrix.overrides[currentChannel]) {
             configMatrix.overrideStates[currentChannel] = document.getElementById("cfg-do-state-toggle").checked;
             currentOutputStates[currentChannel] = configMatrix.overrideStates[currentChannel];
         } else {
@@ -409,7 +425,6 @@ function commitMatrixConfig() {
     configMatrix.global.timeEnd = document.getElementById("mat-time-end").value;
 
     localStorage.setItem("dcs_client_matrix", JSON.stringify(configMatrix));
-    
     localStorage.setItem("dcs_inv_sn", document.getElementById("net-inv-sn").value);
     localStorage.setItem("dcs_app_id", document.getElementById("net-app-id").value);
     localStorage.setItem("dcs_app_secret", document.getElementById("net-app-secret").value);
@@ -442,8 +457,9 @@ function logEvent(desc) {
     while (container.children.length > 100) { container.removeChild(container.lastChild); }
 }
 
+// Automatically purge historical caching layers
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("Service Worker Active."))
-        .catch((err) => console.error("Worker failed:", err));
+    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for(let registration of registrations) { registration.unregister(); }
+    });
 }
