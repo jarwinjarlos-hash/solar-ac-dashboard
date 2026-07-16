@@ -23,12 +23,12 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 12px;
+            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 8px;
             display: flex; flex-direction: column; align-items: center;
             -webkit-user-select: none; user-select: none;
         }
 
-        .container { width: 100%; max-width: 540px; display: none; }
+        .container { width: 100%; max-width: 480px; }
 
         /* PASSCODE OVERLAY */
         #auth-screen {
@@ -36,116 +36,122 @@
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
         }
         .pin-display { font-size: 2.5rem; letter-spacing: 10px; margin-bottom: 24px; height: 50px; color: var(--accent-blue); }
-        .keypad { display: grid; grid-template-columns: repeat(3, 80px); gap: 16px; }
+        .keypad { display: grid; grid-template-columns: repeat(3, 75px); gap: 14px; }
         .key {
-            width: 80px; height: 80px; background-color: var(--card-bg); border: 1px solid var(--border-color);
-            font-size: 1.8rem; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer;
+            width: 75px; height: 75px; background-color: var(--card-bg); border: 1px solid var(--border-color);
+            font-size: 1.6rem; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer;
         }
         .key:active { background-color: #333; }
 
         /* NAVIGATION TABS */
         .tab-bar {
-            display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 12px;
+            display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 10px;
             border: 1px solid var(--border-color); padding: 4px; width: 100%;
         }
         .tab-btn {
-            flex: 1; background: transparent; color: var(--text-sub); border: none; padding: 12px 4px;
-            font-size: 0.85rem; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s;
-            text-align: center;
+            flex: 1; background: transparent; color: var(--text-sub); border: none; padding: 10px 2px;
+            font-size: 0.8rem; font-weight: bold; cursor: pointer; border-radius: 6px; text-align: center;
         }
         .tab-btn.active { background: var(--accent-blue); color: white; }
         .tab-content { display: none; width: 100%; }
         .tab-content.active { display: block; width: 100%; }
 
-        /* HMI INDUSTRIAL ELEMENTS */
-        h1 { font-size: 1.3rem; margin: 4px 0; text-align: center; }
-        .timestamp-header { font-size: 0.75rem; color: var(--text-sub); text-align: center; margin-bottom: 12px; }
-        .card { background-color: var(--card-bg); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border-color); position: relative; }
-        .card-title { font-size: 0.8rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+        h1 { font-size: 1.2rem; margin: 4px 0; text-align: center; }
+        .timestamp-header { font-size: 0.7rem; color: var(--text-sub); text-align: center; margin-bottom: 10px; }
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); position: relative; box-sizing: border-box; }
+        .card-title { font-size: 0.78rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; }
         
-        /* SYNCHRONIZED POWER FLOW DIAGRAM */
-        .flow-container { position: relative; width: 100%; height: 280px; background: #161616; border-radius: 8px; border: 1px solid #252525; margin-bottom: 10px; overflow: hidden; }
-        .flow-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
-        .flow-node { position: absolute; background: #222; border: 1px solid #3c3c3c; border-radius: 8px; padding: 6px; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 85px; box-sizing: border-box; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-        .node-val { font-size: 0.82rem; font-weight: bold; margin-top: 2px; }
-        .node-lbl { font-size: 0.62rem; color: var(--text-sub); text-transform: uppercase; }
+        /* MOBILE RESPONSIVE SYNOPTIC LAYOUT */
+        .synoptic-grid {
+            display: grid; grid-template-columns: 1fr 0.6fr 1fr; grid-template-rows: 1fr 1fr;
+            gap: 16px; position: relative; padding: 10px 4px; background: #151515; border-radius: 8px; border: 1px solid #252525;
+        }
+        .syn-node {
+            background: #202020; border: 1px solid #353535; border-radius: 8px;
+            padding: 8px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; min-height: 65px; box-sizing: border-box; z-index: 2;
+        }
+        .syn-lbl { font-size: 0.6rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
+        .syn-val { font-size: 0.85rem; font-weight: bold; margin-top: 2px; }
         
-        /* FLOW LINE ANIMATIONS */
-        .flow-line { fill: none; stroke: #333; stroke-width: 2; stroke-dasharray: 6 4; }
-        .flow-line.active-out { stroke: var(--accent-blue); animation: dashOut 2s linear infinite; }
-        .flow-line.active-in { stroke: var(--accent-green); animation: dashIn 2s linear infinite; }
-        @keyframes dashOut { to { stroke-dashoffset: -20; } }
-        @keyframes dashIn { to { stroke-dashoffset: 20; } }
+        .center-inv {
+            grid-column: 2; grid-row: 1 / span 2; align-self: center;
+            background: #1a237e; border: 1px solid var(--accent-blue); color: white;
+            border-radius: 8px; padding: 10px 2px; text-align: center; font-size: 0.7rem; font-weight: bold;
+        }
 
-        .vector-tag { font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; margin-top: 8px; text-align: center; }
-        .vector-charging { background: rgba(76, 175, 80, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
-        .vector-discharging { background: rgba(244, 67, 54, 0.15); color: var(--status-off); border: 1px solid var(--status-off); }
+        /* DYNAMIC PATH ANCHORS */
+        .flow-dot {
+            position: absolute; width: 6px; height: 6px; border-radius: 50%; background: white;
+            opacity: 0; pointer-events: none; z-index: 1;
+        }
+        .flow-active { opacity: 1; }
+        
+        /* DIRECTION ANIMATION TRACKS */
+        .pv-to-inv { left: 20%; top: 22%; animation: forceRight 1.5s linear infinite; background: var(--accent-orange); }
+        .inv-to-grid { right: 20%; top: 22%; animation: forceRight 1.5s linear infinite; background: var(--accent-blue); }
+        .grid-to-inv { right: 20%; top: 22%; animation: forceLeft 1.5s linear infinite; background: var(--status-off); }
+        .inv-to-load { right: 20%; bottom: 22%; animation: forceRight 1.5s linear infinite; background: #e91e63; }
+        
+        .inv-to-bat { left: 20%; bottom: 22%; animation: forceLeft 1.5s linear infinite; background: var(--accent-green); }
+        .bat-to-inv { left: 20%; bottom: 22%; animation: forceRight 1.5s linear infinite; background: #9c27b0; }
 
-        /* HIGH DENSITY MATRIX TABLE */
+        @keyframes forceRight { 0% { transform: translateX(0); } 100% { transform: translateX(45px); } }
+        @keyframes forceLeft { 0% { transform: translateX(45px); } 100% { transform: translateX(0); } }
+
+        .vector-tag { font-size: 0.72rem; font-weight: bold; padding: 5px; border-radius: 4px; margin-top: 10px; text-align: center; }
+        .vector-charging { background: rgba(76, 175, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(76, 175, 80, 0.4); }
+        .vector-discharging { background: rgba(244, 67, 54, 0.12); color: var(--status-off); border: 1px solid rgba(244, 67, 54, 0.4); }
+
+        /* MATRIX TABLE LAYOUT */
         .matrix-w { width: 100%; overflow-x: auto; }
-        .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left; }
-        .matrix-table th { color: var(--text-sub); padding: 8px 4px; border-bottom: 1px solid var(--border-color); font-weight: 600; }
-        .matrix-table td { padding: 10px 4px; border-bottom: 1px solid #252525; white-space: nowrap; }
-        .badge { padding: 2px 5px; border-radius: 4px; font-weight: bold; font-size: 0.7 rules; }
-        .badge-on { background: rgba(76, 175, 80, 0.2); color: var(--accent-green); }
-        .badge-off { background: rgba(244, 67, 54, 0.2); color: var(--status-off); }
-        .badge-auto { background: rgba(33, 150, 243, 0.2); color: var(--accent-blue); }
-        .badge-hand { background: rgba(255, 152, 0, 0.2); color: var(--accent-orange); }
+        .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+        .matrix-table th { color: var(--text-sub); padding: 6px 2px; border-bottom: 1px solid var(--border-color); text-align: left; }
+        .matrix-table td { padding: 8px 2px; border-bottom: 1px solid #252525; }
+        .badge { padding: 2px 4px; border-radius: 4px; font-weight: bold; font-size: 0.65rem; }
+        .badge-on { background: rgba(76, 175, 80, 0.15); color: var(--accent-green); }
+        .badge-off { background: rgba(244, 67, 54, 0.15); color: var(--status-off); }
+        .badge-auto { background: rgba(33, 150, 243, 0.15); color: var(--accent-blue); }
+        .badge-hand { background: rgba(255, 152, 0, 0.15); color: var(--accent-orange); }
 
-        /* CONTROLLER STEPPER FIELD SETS */
-        .step-container { display: flex; align-items: center; justify-content: space-between; background: #181818; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 10px; }
-        .step-label { font-size: 0.82rem; display: flex; align-items: center; gap: 6px; }
+        .step-container { display: flex; align-items: center; justify-content: space-between; background: #161616; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border-color); margin-bottom: 8px; }
+        .step-label { font-size: 0.78rem; }
         .step-controls { display: flex; align-items: center; gap: 4px; }
-        .btn-step { width: 36px; height: 36px; background: #2a2a2a; border: 1px solid #444; color: white; font-size: 1.2rem; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
-        .btn-step:active { background: #444; }
-        .step-input { width: 65px; height: 32px; background: #121212; border: 1px solid var(--border-color); color: white; text-align: center; font-size: 0.9rem; font-weight: bold; border-radius: 4px; }
+        .btn-step { width: 32px; height: 32px; background: #252525; border: 1px solid #444; color: white; font-size: 1.1rem; border-radius: 4px; cursor: pointer; }
+        .step-input { width: 55px; height: 28px; background: #121212; border: 1px solid var(--border-color); color: white; text-align: center; font-size: 0.85rem; border-radius: 4px; }
 
-        /* CHANNEL SELECTOR CHIPS */
-        .chip-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
-        .chip { background: #252525; padding: 8px 2px; text-align: center; border-radius: 6px; font-size: 0.75rem; border: 1px solid var(--border-color); cursor: pointer; font-weight: bold; }
-        .chip.active { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
+        .chip-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
+        .chip { background: #222; padding: 6px 2px; text-align: center; border-radius: 4px; font-size: 0.7rem; border: 1px solid var(--border-color); cursor: pointer; }
+        .chip.active { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
 
-        /* TOGGLE OVERRIDE SWITCH */
-        .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a2a2a; margin-bottom: 12px; }
-        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #2a2a2a; margin-bottom: 8px; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider-sw { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .2s; border-radius: 24px; }
-        .slider-sw:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+        .slider-sw { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .2s; border-radius: 20px; }
+        .slider-sw:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
         input:checked + .slider-sw { background-color: var(--accent-green); }
-        input:checked + .slider-sw:before { transform: translateX(22px); }
+        input:checked + .slider-sw:before { transform: translateX(20px); }
 
-        .info-btn { background: #2a2a2a; border: none; color: var(--accent-blue); width: 18px; height: 18px; border-radius: 50%; font-size: 0.7rem; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
-        .modal-content { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; max-width: 400px; width: 100%; text-align: center; }
-        .modal-close { background: var(--accent-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; margin-top: 16px; cursor: pointer; width: 100%; }
-        .name-input { background: #121212; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 0.85rem; margin-bottom: 12px; }
-
-        .event-log-container { display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
-        .event-row { background: #151515; border-left: 3px solid var(--accent-blue); padding: 10px; border-radius: 4px; font-family: monospace; }
-        .event-time { font-size: 0.7rem; color: var(--accent-green); margin-bottom: 2px; font-weight: bold; }
-        .event-desc { font-size: 0.78rem; color: #e0e0e0; line-height: 1.3; }
-
-        .footer-row { display: flex; gap: 10px; margin-top: 8px; width: 100%; }
-        button.action-btn { flex: 2; background-color: var(--accent-green); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; }
-        #btn-refresh { flex: 1; background-color: #333333; border: 1px solid var(--border-color); color: white; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        .event-log-container { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+        .event-row { background: #141414; border-left: 3px solid var(--accent-blue); padding: 8px; border-radius: 4px; font-family: monospace; }
+        .event-time { font-size: 0.65rem; color: var(--accent-green); }
+        .event-desc { font-size: 0.72rem; color: #dddddd; margin-top: 2px; }
     </style>
 </head>
 <body>
 
-    <!-- SECURITY PASSCODE WALL -->
     <div id="auth-screen">
-        <h2 style="margin-bottom: 4px; font-size: 1.2rem;">System Interlock PIN</h2>
+        <h2 style="margin-bottom: 4px; font-size: 1.1rem;">System Interlock PIN</h2>
         <div class="pin-display" id="pin-display"></div>
         <div class="keypad">
             <div class="key" onclick="appendPin('1')">1</div><div class="key" onclick="appendPin('2')">2</div><div class="key" onclick="appendPin('3')">3</div>
             <div class="key" onclick="appendPin('4')">4</div><div class="key" onclick="appendPin('5')">5</div><div class="key" onclick="appendPin('6')">6</div>
             <div class="key" onclick="appendPin('7')">7</div><div class="key" onclick="appendPin('8')">8</div><div class="key" onclick="appendPin('9')">9</div>
-            <div class="key" style="color: var(--status-off); font-size: 1.1rem;" onclick="clearPin()">CLR</div><div class="key" onclick="appendPin('0')">0</div>
-            <div class="key" style="color: var(--accent-green); font-size: 1.1rem;" onclick="verifyPin()">GO</div>
+            <div class="key" style="color:var(--status-off);" onclick="clearPin()">CLR</div><div class="key" onclick="appendPin('0')">0</div>
+            <div class="key" style="color:var(--accent-green);" onclick="verifyPin()">GO</div>
         </div>
     </div>
 
-    <!-- MAIN CONTROL HUB INTERFACE CONTAINER -->
     <div class="container" id="main-dashboard">
         <h1>☀️ Solar Automation DCS</h1>
         <div class="timestamp-header" id="execution-timestamp">DCS Link Offline</div>
@@ -156,71 +162,67 @@
             <button class="tab-btn" onclick="switchTab('priority-tab', this)">🚦 Priority Matrix</button>
         </div>
 
-        <!-- TAB 1: LIVE MONITOR DASHBOARD -->
+        <!-- TAB 1: DASHBOARD -->
         <div id="monitor-tab" class="tab-content active">
-            <div class="card" style="padding: 10px;">
-                <div class="card-title" style="margin-bottom:6px;">Process Flow Synoptic</div>
+            <div class="card">
+                <div class="card-title">Synoptic Process Grid</div>
                 
-                <!-- HMI ANIMATED SYNOPTIC FLOW CONTAINER -->
-                <div class="flow-container">
-                    <svg class="flow-svg">
-                        <!-- Upper Left: PV to Inverter -->
-                        <path id="path-pv" d="M 52,50 L 270,50 L 270,140" class="flow-line"></path>
-                        <!-- Upper Right: Grid to Inverter -->
-                        <path id="path-grid" d="M 488,50 L 270,50 L 270,140" class="flow-line"></path>
-                        <!-- Lower Left: Battery to Inverter -->
-                        <path id="path-bat" d="M 52,230 L 270,230 L 270,140" class="flow-line"></path>
-                        <!-- Lower Right: Inverter to Load -->
-                        <path id="path-load" d="M 270,140 L 270,230 L 488,230" class="flow-line"></path>
-                    </svg>
-
-                    <!-- Synoptic Nodes -->
-                    <div class="flow-node" style="top:20px; left:10px; border-color:#ffb74d;">
-                        <span class="node-lbl">Solar</span><span id="flow-pv-val" class="node-val" style="color:#ffb74d;">0.00 kW</span>
+                <div class="synoptic-grid">
+                    <!-- Solar -->
+                    <div class="syn-node" style="border-color: var(--accent-orange);">
+                        <span class="syn-lbl">Solar</span>
+                        <span id="lbl-pv" class="syn-val" style="color: var(--accent-orange);">0.00 kW</span>
+                        <div id="dot-pv" class="flow-dot pv-to-inv"></div>
                     </div>
-                    <div class="flow-node" style="top:20px; right:10px; border-color:var(--accent-blue);">
-                        <span class="node-lbl">Grid</span><span id="flow-grid-val" class="node-val" style="color:var(--accent-blue);">0 W</span>
+                    
+                    <!-- Center Inverter Node -->
+                    <div class="center-inv">
+                        DEYE<br><span style="font-size:0.6rem;opacity:0.8;">Inverter</span>
                     </div>
-                    <div class="flow-node" style="top:100px; left:225px; border-color:#9c27b0; width:90px;">
-                        <span class="node-lbl">Inverter</span><span id="flow-inv-val" class="node-val" style="color:#9c27b0;">Deye 8k</span>
+                    
+                    <!-- Grid -->
+                    <div class="syn-node" style="border-color: var(--accent-blue);">
+                        <span class="syn-lbl">Grid</span>
+                        <span id="lbl-grid" class="syn-val" style="color: var(--accent-blue);">0 W</span>
+                        <div id="dot-grid-out" class="flow-dot inv-to-grid"></div>
+                        <div id="dot-grid-in" class="flow-dot grid-to-inv"></div>
                     </div>
-                    <div class="flow-node" style="bottom:20px; left:10px; border-color:var(--accent-green);">
-                        <span id="flow-bat-soc" class="node-lbl" style="color:var(--accent-green); font-weight:bold;">100%</span>
-                        <span id="flow-bat-val" class="node-val" style="color:var(--accent-green);">0.00 kW</span>
+                    
+                    <!-- Battery -->
+                    <div class="syn-node" style="border-color: var(--accent-green);">
+                        <span id="lbl-soc" class="syn-lbl" style="color: var(--accent-green); font-weight:bold;">100%</span>
+                        <span id="lbl-bat" class="syn-val" style="color: var(--accent-green);">0.00 kW</span>
+                        <div id="dot-bat-out" class="flow-dot bat-to-inv"></div>
+                        <div id="dot-bat-in" class="flow-dot inv-to-bat"></div>
                     </div>
-                    <div class="flow-node" style="bottom:20px; right:10px; border-color:#e91e63;">
-                        <span class="node-lbl">Load</span><span id="flow-load-val" class="node-val" style="color:#e91e63;">0 W</span>
+                    
+                    <!-- Home Load -->
+                    <div class="syn-node" style="border-color: #e91e63;">
+                        <span class="syn-lbl">Load</span>
+                        <span id="lbl-load" class="syn-val" style="color: #e91e63;">0 W</span>
+                        <div id="dot-load" class="flow-dot inv-to-load"></div>
                     </div>
                 </div>
 
-                <div id="vector-status-tag" class="vector-tag vector-charging">SYNCING CONTROL LOGIC...</div>
+                <div id="vector-status-tag" class="vector-tag vector-charging">SYNCING CONTROL CORE...</div>
             </div>
 
             <div class="card">
-                <div class="card-title">10-Channel Hardware Matrix Rack</div>
+                <div class="card-title">10-Channel Hardware Rack</div>
                 <div class="matrix-w">
                     <table class="matrix-table">
                         <thead>
-                            <tr>
-                                <th>Ch</th>
-                                <th>Assigned Asset Label</th>
-                                <th>State</th>
-                                <th>Setp</th>
-                                <th>Mode</th>
-                                <th>Seq</th>
-                            </tr>
+                            <tr><th>Ch</th><th>Asset Name</th><th>State</th><th>Setp</th><th>Mode</th><th>Seq</th></tr>
                         </thead>
-                        <tbody id="matrix-rack-body">
-                            <!-- Populated Dynamically by app.js -->
-                        </tbody>
+                        <tbody id="matrix-rack-body"></tbody>
                     </table>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-title">Sequential Event History Logs</div>
+                <div class="card-title">Process History Log</div>
                 <div class="event-log-container" id="event-log-terminal">
-                    <div style="color: var(--text-sub); text-align: center; font-family: monospace; font-size: 0.8rem; padding: 10px;">Initializing process log array buffer...</div>
+                    <div style="color:var(--text-sub); text-align:center; font-size:0.75rem; padding:8px;">Initializing matrix loop...</div>
                 </div>
             </div>
         </div>
@@ -228,7 +230,7 @@
         <!-- TAB 2: DEVICE ASSET CONFIGURATION -->
         <div id="config-tab" class="tab-content">
             <div class="card">
-                <div class="card-title">Select Channel to Provision</div>
+                <div class="card-title">Select Output Channel</div>
                 <div class="chip-grid">
                     <div class="chip active" onclick="selectConfigChannel('AO1', this)">AO1</div>
                     <div class="chip" onclick="selectConfigChannel('AO2', this)">AO2</div>
@@ -245,44 +247,27 @@
                 </div>
             </div>
 
-            <div class="card" id="channel-provision-card">
-                <div class="card-title"><span id="config-target-title">AO1 Hardware Settings</span></div>
-                
-                <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">Custom Asset Description Label</label>
-                <input type="text" id="cfg-custom-name" class="name-input" placeholder="Enter custom hardware description...">
+            <div class="card">
+                <div class="card-title"><span id="config-target-title">AO1 Settings</span></div>
+                <label style="font-size:0.7rem; color:var(--text-sub); display:block; margin-bottom:4px;">Custom Asset Description Tag</label>
+                <input type="text" id="cfg-custom-name" class="name-input">
 
                 <div class="switch-row">
                     <div>
-                        <div style="font-size:0.85rem; font-weight:bold;">Manual Override (Hand Mode) <button class="info-btn" onclick="showHelp('hand')">i</button></div>
-                        <div style="font-size:0.7rem; color:var(--text-sub);">Bypasses automated solar calculations</div>
+                        <div style="font-size:0.8rem; font-weight:bold;">Manual Override (Hand Mode)</div>
                     </div>
                     <label class="switch"><input type="checkbox" id="cfg-override-toggle" onchange="toggleOverrideUI()"><span class="slider-sw"></span></label>
                 </div>
 
-                <!-- DYNAMIC PORTION FOR DO/AO MANUAL TARGETS -->
                 <div class="switch-row" id="cfg-do-manual-row" style="display:none;">
-                    <div>
-                        <div style="font-size:0.85rem; font-weight:bold;">Forced Hand State</div>
-                        <div style="font-size:0.7rem; color:var(--text-sub);">Set output hard ON or OFF</div>
-                    </div>
+                    <div><div style="font-size:0.8rem; font-weight:bold;">Forced Output State</div></div>
                     <label class="switch"><input type="checkbox" id="cfg-do-state-toggle"><span class="slider-sw"></span></label>
                 </div>
 
-                <!-- DYNAMIC PORTION FOR AO INDIVIDUAL LIMIT TUNING -->
                 <div id="cfg-ao-limits-block">
-                    <div style="font-size: 0.75rem; color: var(--text-sub); font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Analog Temperature Band Boundaries</div>
-                    
                     <div class="step-container">
                         <div class="step-label">Tier 4 Max Excess (SP_LOWLOW)</div>
                         <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-lowlow', -1)">-</button><input type="number" id="cfg-sp-lowlow" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-lowlow', 1)">+</button></div>
-                    </div>
-                    <div class="step-container">
-                        <div class="step-label">Tier 3 Stable Excess (SP_LOW_MID)</div>
-                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-low-mid', -1)">-</button><input type="number" id="cfg-sp-low-mid" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-low-mid', 1)">+</button></div>
-                    </div>
-                    <div class="step-container">
-                        <div class="step-label">Tier 2 Light Excess (SP_HIGH_MID)</div>
-                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-high-mid', -1)">-</button><input type="number" id="cfg-sp-high-mid" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-high-mid', 1)">+</button></div>
                     </div>
                     <div class="step-container">
                         <div class="step-label">Tier 1 Eco Boundary (SP_HIGH)</div>
@@ -290,113 +275,56 @@
                     </div>
                 </div>
 
-                <!-- DYNAMIC PORTION FOR DO SEQUENCER MAPPING -->
                 <div id="cfg-do-priority-block" style="display:none;">
                     <div class="step-container">
-                        <div class="step-label">Sequence Priority Queue (1-5)</div>
+                        <div class="step-label">Sequence Queue (1-5)</div>
                         <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-priority', -1, 1, 5)">-</button><input type="number" id="cfg-priority" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-priority', 1, 1, 5)">+</button></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 3: MASTER PRIORITY AND MATRIX RATIOS -->
+        <!-- TAB 3: SETTING CREDENTIALS -->
         <div id="priority-tab" class="tab-content">
-            <!-- PERSONAL INVERTER API CREDENTIALS CARD -->
             <div class="card">
-                <div class="card-title">Inverter Link Credentials <button class="info-btn" onclick="showHelp('inverter_creds')">i</button></div>
+                <div class="card-title">Inverter Link Credentials</div>
+                <label style="font-size:0.65rem; color:var(--text-sub);">Inverter Serial Number (SN)</label>
+                <input type="text" id="net-inv-sn" class="name-input">
                 
-                <label style="font-size:0.7rem; color:var(--text-sub); display:block; margin-bottom:2px;">Inverter Serial Number (SN)</label>
-                <input type="text" id="net-inv-sn" class="name-input" placeholder="e.g., 230XXXXXXXX" style="font-family:monospace;">
-                
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <div>
-                        <label style="font-size:0.65rem; color:var(--text-sub);">Developer App ID</label>
-                        <input type="text" id="net-app-id" class="name-input" placeholder="App ID Key" style="font-size:0.75rem;">
-                    </div>
-                    <div>
-                        <label style="font-size:0.65rem; color:var(--text-sub);">Developer App Secret</label>
-                        <input type="password" id="net-app-secret" class="name-input" placeholder="App Secret Key" style="font-size:0.75rem;">
-                    </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                    <div><label style="font-size:0.65rem; color:var(--text-sub);">App ID</label><input type="text" id="net-app-id" class="name-input"></div>
+                    <div><label style="font-size:0.65rem; color:var(--text-sub);">App Secret</label><input type="password" id="net-app-secret" class="name-input"></div>
                 </div>
-
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <div>
-                        <label style="font-size:0.65rem; color:var(--text-sub);">Portal Username / Email</label>
-                        <input type="text" id="net-portal-user" class="name-input" placeholder="Login Email" style="font-size:0.75rem;">
-                    </div>
-                    <div>
-                        <label style="font-size:0.65rem; color:var(--text-sub);">Portal Password</label>
-                        <input type="password" id="net-portal-pass" class="name-input" placeholder="Password" style="font-size:0.75rem;">
-                    </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                    <div><label style="font-size:0.65rem; color:var(--text-sub);">Username</label><input type="text" id="net-portal-user" class="name-input"></div>
+                    <div><label style="font-size:0.65rem; color:var(--text-sub);">Password</label><input type="password" id="net-portal-pass" class="name-input"></div>
                 </div>
             </div>
 
             <div class="card">
-                <div class="card-title">Global Optimization Permissives</div>
-                
-                <!-- SIMULATED SOLAR OFFSET FIELD -->
+                <div class="card-title">Global Optimizations</div>
                 <div class="step-container" style="border: 1px solid var(--accent-orange);">
-                    <div class="step-label" style="color: var(--accent-orange);">Simulated Solar Offset <button class="info-btn" onclick="showHelp('offset')">i</button></div>
-                    <div class="step-controls"><button class="btn-step" style="border-color:var(--accent-orange);" onclick="adjustStep('mat-solar-offset', -100, -5000, 5000)">-</button><input type="number" id="mat-solar-offset" class="step-input" value="0" readonly><button class="btn-step" style="border-color:var(--accent-orange);" onclick="adjustStep('mat-solar-offset', 100, -5000, 5000)">+</button></div>
+                    <div class="step-label" style="color: var(--accent-orange);">Simulated Solar Offset</div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-solar-offset', -100, -5000, 5000)">-</button><input type="number" id="mat-solar-offset" class="step-input" value="0" readonly><button class="btn-step" onclick="adjustStep('mat-solar-offset', 100, -5000, 5000)">+</button></div>
                 </div>
-
                 <div class="step-container">
-                    <div class="step-label">Auto Activation Min SOC <button class="info-btn" onclick="showHelp('soc')">i</button></div>
+                    <div class="step-label">Auto Activation Min SOC</div>
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-min-soc', -5, 20, 95)">-</button><input type="number" id="mat-min-soc" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-min-soc', 5, 20, 95)">+</button></div>
                 </div>
-
                 <div class="step-container">
-                    <div class="step-label">True Discharge Threshold <button class="info-btn" onclick="showHelp('discharge')">i</button></div>
-                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-discharge-th', -25, 50, 1000)">-</button><input type="number" id="mat-discharge-th" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-discharge-th', 25, 50, 1000)">+</button></div>
-                </div>
-
-                <div class="step-container">
-                    <div class="step-label">Hysteresis Power Deadband <button class="info-btn" onclick="showHelp('deadband')">i</button></div>
+                    <div class="step-label">Hysteresis Power Deadband</div>
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-deadband', -25, 50, 500)">-</button><input type="number" id="mat-deadband" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-deadband', 25, 50, 500)">+</button></div>
                 </div>
-
-                <div class="step-container">
-                    <div class="step-label">Cascading Stage Delay <button class="info-btn" onclick="showHelp('delay')">i</button></div>
-                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-delay', -1, 1, 20)">-</button><input type="number" id="mat-delay" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-delay', 1, 1, 20)">+</button></div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">Daytime Window Operations <button class="info-btn" onclick="showHelp('time')">i</button></div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
-                    <div>
-                        <label style="font-size:0.7rem; color:var(--text-sub);">Start Optimization</label>
-                        <input type="time" id="mat-time-start" style="width:100%; height:36px; background:#181818; border:1px solid var(--border-color); color:white; padding:4px; border-radius:6px; font-size:0.9rem; box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label style="font-size:0.7rem; color:var(--text-sub);">Force Night Standby</label>
-                        <input type="time" id="mat-time-end" style="width:100%; height:36px; background:#181818; border:1px solid var(--border-color); color:white; padding:4px; border-radius:6px; font-size:0.9rem; box-sizing:border-box;">
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">DCS Sequence Execution Queue Maps</div>
-                <div style="font-family:monospace; font-size:0.8rem; display:flex; flex-direction:column; gap:6px;" id="queue-mapping-list">
-                    <!-- Loaded Dynamically via script arrays -->
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div><label style="font-size:0.65rem; color:var(--text-sub);">Start Time</label><input type="time" id="mat-time-start" style="width:100%; height:32px; background:#161616; border:1px solid var(--border-color); color:white; border-radius:4px;"></div>
+                    <div><label style="font-size:0.65rem; color:var(--text-sub);">End Time</label><input type="time" id="mat-time-end" style="width:100%; height:32px; background:#161616; border:1px solid var(--border-color); color:white; border-radius:4px;"></div>
                 </div>
             </div>
         </div>
 
-        <!-- GLOBAL CONTROL PERSISTENCE STRIP -->
         <div class="footer-row">
-            <button id="btn-refresh" type="button" onclick="executeMasterSync()">🔄 Sync</button>
+            <button id="btn-refresh" type="button" onclick="syncTelemetryFromBackend()">🔄 Sync</button>
             <button class="action-btn" id="btn-save" type="button" onclick="commitMatrixConfig()">💾 Save Config Matrix</button>
-        </div>
-    </div>
-
-    <!-- CONTEXT HELP DIALOG MODAL -->
-    <div class="modal" id="help-modal">
-        <div class="modal-content">
-            <h3 id="help-title" style="margin-top:0; font-size:1.1rem; color:var(--accent-blue);">Help</h3>
-            <p id="help-text" style="font-size:0.85rem; line-height:1.4; color:#e0e0e0; text-align:justify; margin-bottom:0;"></p>
-            <button class="modal-close" onclick="closeHelp()">Dismiss Interlock Dialog</button>
         </div>
     </div>
 
