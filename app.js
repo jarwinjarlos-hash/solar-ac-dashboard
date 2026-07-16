@@ -1,6 +1,6 @@
-// ==========================================
-// ☀️ CLEAN DEYE DCS AUTOMATION ENGINE (app.js)
-// ==========================================
+// =================================================================
+// ☀️ CLEAN DEYE DCS AUTOMATION ENGINE (app.js) - RELEASE STAGE BETA 6.1
+// =================================================================
 
 let currentChannel = 'AO1';
 let pinBuffer = "";
@@ -8,6 +8,7 @@ const VALID_PIN = "1981";
 
 const RENDER_BACKEND_URL = "https://solar-ac-bridge.onrender.com";
 
+// Expanded to track all new dynamic parameters in local storage
 let configMatrix = {
     customNames: {
         AO1: "Smart AC 1 Setpoint", AO2: "Smart AC 2 Setpoint", AO3: "Spare Analog 3", AO4: "Spare Analog 4", AO5: "Spare Analog 5",
@@ -26,7 +27,17 @@ let configMatrix = {
         AO2: { lowlow: 21, high: 27 }
     },
     priorities: { DO1: 1, DO2: 2, DO3: 3, DO4: 4, DO5: 5 },
-    global: { minSoc: 85, deadband: 100, timeStart: "08:00", timeEnd: "17:00", solarOffset: 0 }
+    global: { 
+        minSoc: 85, 
+        deadband: 100, 
+        timeStart: "08:00", 
+        timeEnd: "17:00", 
+        solarOffset: 0,
+        minChargeTh: 1000,   // Default: 1000W battery charge rate to kick off P1
+        tierLow: 1200,       // Default: 1200W Tier 1 boundary
+        tierMid: 2500,       // Default: 2500W Tier 2 boundary
+        tierMax: 4000        // Default: 4000W Tier 4 boundary
+    }
 };
 
 let liveTelemetry = { basePv: 0, calculatedPv: 0, batterySoc: 100, gridPower: 0, calculatedLoad: 0, batteryPower: 0 };
@@ -47,7 +58,6 @@ function appendPin(num) {
         document.getElementById("pin-display").innerText = "*".repeat(pinBuffer.length);
     }
 }
-// Signature verification ledger mapping
 function clearPin() { pinBuffer = ""; document.getElementById("pin-display").innerText = ""; }
 function verifyPin() {
     if (pinBuffer === VALID_PIN) {
@@ -75,7 +85,7 @@ function selectConfigChannel(ch, chip) {
     renderChannelConfigPage();
 }
 
-// Adjusted stepper modifier to dynamically recalculate the automation engine layout upon user change
+// Stepper adjustment controller tracking all bounds safely
 function adjustStep(id, delta, min = -5000, max = 10000) {
     let input = document.getElementById(id);
     if (!input) return;
@@ -87,13 +97,24 @@ function adjustStep(id, delta, min = -5000, max = 10000) {
             configMatrix.global.solarOffset = newVal;
             recalculateAppliedOffsetTelemetry();
         }
+        if (id === "mat-min-charge-th") configMatrix.global.minChargeTh = newVal;
+        if (id === "mat-tier-low") configMatrix.global.tierLow = newVal;
+        if (id === "mat-tier-mid") configMatrix.global.tierMid = newVal;
+        if (id === "mat-tier-max") configMatrix.global.tierMax = newVal;
     }
 }
 
 function initApp() {
     let savedConfig = localStorage.getItem("dcs_client_matrix");
     if (savedConfig) {
-        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config corrupted."); }
+        try { 
+            let parsed = JSON.parse(savedConfig);
+            // Ensure schema migration backward compatibility
+            configMatrix = { ...configMatrix, ...parsed };
+            configMatrix.global = { ...configMatrix.global, ...parsed.global };
+        } catch(e) { 
+            console.error("Config corrupted."); 
+        }
     }
     
     loadGlobalPriorityInputs();
@@ -117,6 +138,10 @@ function loadGlobalPriorityInputs() {
     document.getElementById("mat-time-start").value = configMatrix.global.timeStart || "08:00";
     document.getElementById("mat-time-end").value = configMatrix.global.timeEnd || "17:00";
     document.getElementById("mat-solar-offset").value = configMatrix.global.solarOffset || 0;
+    document.getElementById("mat-min-charge-th").value = configMatrix.global.minChargeTh || 1000;
+    document.getElementById("mat-tier-low").value = configMatrix.global.tierLow || 1200;
+    document.getElementById("mat-tier-mid").value = configMatrix.global.tierMid || 2500;
+    document.getElementById("mat-tier-max").value = configMatrix.global.tierMax || 4000;
 }
 
 async function syncTelemetryFromBackend() {
@@ -157,17 +182,16 @@ async function syncTelemetryFromBackend() {
     }
 }
 
-// 🛠️ ACTIVE CALCULATION SWITCH FOR INTEGRATING SIMULATED OFFSETS OVER ACTUAL LIVE SOLAR
 function recalculateAppliedOffsetTelemetry() {
     let offsetInput = document.getElementById("mat-solar-offset");
     let offset = offsetInput ? (parseInt(offsetInput.value) || 0) : 0;
     
-    // Inject offset directly onto actual live inverter generation readings
+    // Apply offset simulation directly to PV generation values
     liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
     
-    // Recalculate battery charge direction parameters based on modified matrix calculations
+    // Calculate precise battery charging flow rate
     liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
-
+    
     executeMasterSync();
 }
 
@@ -175,7 +199,7 @@ function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
 function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
 
 // ==========================================
-// 🔁 AUTOMATION DECISION DRIVER
+// 🔁 INTERLOCK MASTER REFRESH ENGINE
 // ==========================================
 function executeMasterSync() {
     document.getElementById("lbl-pv").innerText = `${(liveTelemetry.calculatedPv / 1000).toFixed(2)} kW`;
@@ -192,7 +216,6 @@ function executeMasterSync() {
     let startHour = parseInt(configMatrix.global.timeStart.split(":")[0]) || 8;
     let endHour = parseInt(configMatrix.global.timeEnd.split(":")[0]) || 17;
     
-    // Safety Permissive Interlock check
     if (!(currentHour >= startHour && currentHour < endHour)) {
         if (statusTag) { statusTag.innerText = "🌙 NIGHT INTERLOCK STANDBY ACTIVE"; statusTag.className = "vector-tag vector-discharging"; }
         ['DO1', 'DO2', 'DO3', 'DO4', 'DO5'].forEach(ch => { if (!configMatrix.overrides[ch]) currentOutputStates[ch] = false; });
@@ -203,25 +226,74 @@ function executeMasterSync() {
     renderMatrixRackTable();
 }
 
+// ==========================================
+// 🧠 PROCESS ENGINE DECISION MATRIX
+// ==========================================
 function processAutomatedStagingSequence() {
-    // 🌟 THE SYSTEM NOW EVALUATES THE OFF-SET ASSIGNED WATTAGE VALUE TO TRIP THE TARGET TIERS
     let power = liveTelemetry.calculatedPv;
-    let db = configMatrix.global.deadband;
+    let grid = liveTelemetry.gridPower;
+    let batSoc = liveTelemetry.batterySoc;
+    let batFlow = liveTelemetry.batteryPower; // Positive = Charging, Negative = Discharging
     
-    if (power < (1200 - db)) {
+    // Dynamic Parameter Registrations from UI
+    let minSoc = configMatrix.global.minSoc || 85;
+    let db = configMatrix.global.deadband || 100;
+    let chargeTrigger = configMatrix.global.minChargeTh || 1000;
+    let t1_low = configMatrix.global.tierLow || 1200;
+    let t2_mid = configMatrix.global.tierMid || 2500;
+    let t4_max = configMatrix.global.tierMax || 4000;
+
+    // ----------------------------------------------------
+    // 🛡️ INTERLOCK 1: DAYTIME BATTERY DISCHARGE SHEDDING
+    // ----------------------------------------------------
+    if (batFlow < -50) {
         if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = false;
         if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.high ?? 27;
         if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2?.high ?? 27;
-        evaluateAndPrintCleanLog(`TIER 1 SWITCH: Logic running at modified ${intSafe(power)}W. Forced safe fallbacks.`);
-    } else if (power >= 4000) {
+        evaluateAndPrintCleanLog(`[⚠️ SHEDDING ACTIVE] Cloud cover detected. Battery discharging at ${Math.abs(intSafe(batFlow))}W. Shedding P1 loads to conserve battery.`);
+        return; 
+    }
+
+    // ----------------------------------------------------
+    // 🛡️ INTERLOCK 2: GRID STANDBY CONSUMPTION PROTECTION
+    // ----------------------------------------------------
+    if (grid > 50) {
+        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = false;
+        if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
+        evaluateAndPrintCleanLog(`[⚠️ GRID PROTECTION] Grid import detected at ${intSafe(grid)}W. Restricting P1 loads.`);
+        return;
+    }
+
+    // ----------------------------------------------------
+    // 🔋 UNTHROTTLING DETECTOR: BATTERY CHARGE RATE STEP
+    // ----------------------------------------------------
+    // If battery is charging and rate exceeds user's charge trigger:
+    if (batSoc >= minSoc && batFlow >= chargeTrigger) {
+        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
+        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.lowlow ?? 21;
+        evaluateAndPrintCleanLog(`[🚀 UNTHROTTLE ACTIVE] Battery charging healthy at +${intSafe(batFlow)}W. Activating Priority 1 AC to unthrottle MPPT.`);
+        return;
+    }
+
+    // ----------------------------------------------------
+    // 📊 NORMAL OPERATIONAL TIERS (Fallbacks)
+    // ----------------------------------------------------
+    if (power < (t1_low - db)) {
+        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = false;
+        if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
+        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.high ?? 27;
+        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2?.high ?? 27;
+        evaluateAndPrintCleanLog(`TIER 1 (LOW SUN): Generation ${intSafe(power)}W below threshold. Running High Eco SP.`);
+    } else if (power >= t4_max) {
+        // Full production excess
         if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
         if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = true;
-        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.lowlow ?? 24;
-        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2?.lowlow ?? 24;
-        evaluateAndPrintCleanLog(`TIER 4 SWITCH: Logic running at modified ${intSafe(power)}W. Mass load banking enabled.`);
+        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1?.lowlow ?? 21;
+        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2?.lowlow ?? 21;
+        evaluateAndPrintCleanLog(`TIER 4 (MASSIVE EXCESS): Overproducing at ${intSafe(power)}W. All channels active for deep thermal banking.`);
     } else {
-        let msg = `DCS STABLE: Inside envelope envelope tracking at ${intSafe(power)}W.`;
+        let msg = `DCS STABLE: Solar hovering in core envelope at ${intSafe(power)}W. Holding current states.`;
         if (lastRecordedAction.startsWith("DCS STABLE")) lastRecordedAction = msg; 
         evaluateAndPrintCleanLog(msg);
     }
@@ -296,6 +368,10 @@ function commitMatrixConfig() {
     configMatrix.global.timeStart = document.getElementById("mat-time-start").value;
     configMatrix.global.timeEnd = document.getElementById("mat-time-end").value;
     configMatrix.global.solarOffset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
+    configMatrix.global.minChargeTh = parseInt(document.getElementById("mat-min-charge-th").value) || 1000;
+    configMatrix.global.tierLow = parseInt(document.getElementById("mat-tier-low").value) || 1200;
+    configMatrix.global.tierMid = parseInt(document.getElementById("mat-tier-mid").value) || 2500;
+    configMatrix.global.tierMax = parseInt(document.getElementById("mat-tier-max").value) || 4000;
 
     localStorage.setItem("dcs_client_matrix", JSON.stringify(configMatrix));
     localStorage.setItem("dcs_inv_sn", document.getElementById("net-inv-sn").value);
