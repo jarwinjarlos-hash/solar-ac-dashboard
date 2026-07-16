@@ -144,7 +144,7 @@ async function syncTelemetryFromBackend() {
             let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
             liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
             
-            // Battery power balance matrix calculation rules tracks
+            // Recompute balance matrix vector directions cleanly
             liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
 
             evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry loaded. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
@@ -161,7 +161,7 @@ function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
 function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
 
 // ==========================================
-// 🔁 SVG LINE PATHWAYS DIRECTION MATRICES
+// 🔁 INTERLOCK MASTER REGISTER SYNC DRIVER
 // ==========================================
 function executeMasterSync() {
     document.getElementById("lbl-pv").innerText = `${(liveTelemetry.calculatedPv / 1000).toFixed(2)} kW`;
@@ -173,26 +173,32 @@ function executeMasterSync() {
     document.getElementById("lbl-bat").innerText = `${liveTelemetry.batteryPower < 0 ? '-' : ''}${batKw} kW`;
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
-    // Manage SVG component line dash animations dynamically based on direction vectors
-    updatePathAnimation("path-pv", liveTelemetry.calculatedPv > 50, "active-out");
-    updatePathAnimation("path-load", liveTelemetry.calculatedLoad > 50, "active-out");
+    // 🌟 ACTIVE VECTOR FLUID BUBBLE PATH CALCULATIONS
+    toggleFlowLineAnimation("path-pv", "bubble-pv", liveTelemetry.calculatedPv > 50, "active-out");
+    toggleFlowLineAnimation("path-load", "bubble-load", liveTelemetry.calculatedLoad > 50, "active-out");
     
-    // Grid paths
+    // Grid pathways animations drivers
     if (liveTelemetry.gridPower > 50) {
-        updatePathAnimation("path-grid", true, "active-in");  // Import from grid
+        toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", true, "active-out"); // Import
+        toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", false);
     } else if (liveTelemetry.gridPower < -50) {
-        updatePathAnimation("path-grid", true, "active-out"); // Export to grid
+        toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", true, "active-out"); // Export
+        toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", false);
     } else {
-        updatePathAnimation("path-grid", false);
+        toggleFlowLineAnimation("path-grid-in", "bubble-grid-in", false);
+        toggleFlowLineAnimation("path-grid-out", "bubble-grid-out", false);
     }
 
-    // Battery charging vs discharging animations lines paths
+    // Battery balance pathways animations drivers
     if (liveTelemetry.batteryPower > 50) {
-        updatePathAnimation("path-bat", true, "active-out"); // Charging direction path
+        toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", true, "active-out"); // Charging direction
+        toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", false);
     } else if (liveTelemetry.batteryPower < -50) {
-        updatePathAnimation("path-bat", true, "active-in");  // Discharging direction path
+        toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", true, "active-out"); // Discharging direction
+        toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", false);
     } else {
-        updatePathAnimation("path-bat", false);
+        toggleFlowLineAnimation("path-bat-in", "bubble-bat-in", false);
+        toggleFlowLineAnimation("path-bat-out", "bubble-bat-out", false);
     }
 
     let statusTag = document.getElementById("vector-status-tag");
@@ -210,10 +216,18 @@ function executeMasterSync() {
     renderMatrixRackTable();
 }
 
-function updatePathAnimation(id, active, className = "") {
-    const p = document.getElementById(id);
-    if (!p) return;
-    p.className.baseVal = active ? `flow-path ${className}` : "flow-path";
+function toggleFlowLineAnimation(lineId, bubbleId, active, className = "") {
+    const p = document.getElementById(lineId);
+    const b = document.getElementById(bubbleId);
+    if (!p || !b) return;
+    
+    if (active) {
+        p.className.baseVal = `flow-path ${className}`;
+        b.className.baseVal = "animated-bubble active";
+    } else {
+        p.className.baseVal = "flow-path";
+        b.className.baseVal = "animated-bubble";
+    }
 }
 
 function processAutomatedStagingSequence() {
