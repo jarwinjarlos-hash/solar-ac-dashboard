@@ -1,5 +1,5 @@
 // ==========================================
-// ☀️ COMMERCIAL SOLAR DCS AUTOMATION ENGINE (app.js)
+// ☀️ CLEAN DEYE DCS AUTOMATION ENGINE (app.js)
 // ==========================================
 
 let currentChannel = 'AO1';
@@ -45,7 +45,7 @@ const helpStrings = {
     deadband: "Symmetric wattage buffer applied to trigger parameters. Stops relays and compressors from rapidly cycling back and forth when solar generation hovers directly on threshold parameters.",
     delay: "The block-start sequence countdown timer. Forces the system to hold staging for a set number of minutes before energizing the next priority load to mitigate inrush current spikes.",
     time: "Defines the active daytime tracking window. Outside this range, the system automatically forces into Night Standby, locking out automation for manual discretion.",
-    inverter_creds: "Your personal Deye/Solarman developer portal credentials. These are stored locally in your browser memory and are used to securely request live data from your inverter without exposing your password in public backend files."
+    inverter_creds: "Your personal Deye portal developer credentials. These are stored locally in your browser memory and are used to securely request live data from your inverter without exposing your password in public backend files."
 };
 
 // ==========================================
@@ -118,14 +118,14 @@ function adjustStep(id, delta, min = -5000, max = 10000) {
 function initApp() {
     let savedConfig = localStorage.getItem("dcs_client_matrix");
     if (savedConfig) {
-        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config array corrupted, resetting defaults."); }
+        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config array corrupted."); }
     }
     
     loadGlobalPriorityInputs();
     renderMatrixRackTable();
     renderChannelConfigPage();
     
-    // Load local storage inputs on launch
+    // Load local storage keys from phone vault
     document.getElementById("net-inv-sn").value = localStorage.getItem("dcs_inv_sn") || "";
     document.getElementById("net-app-id").value = localStorage.getItem("dcs_app_id") || "";
     document.getElementById("net-app-secret").value = localStorage.getItem("dcs_app_secret") || "";
@@ -133,9 +133,9 @@ function initApp() {
     document.getElementById("net-portal-pass").value = localStorage.getItem("dcs_portal_pass") || "";
 
     executeMasterSync();
-    syncTelemetryFromBackend();
     
-    // 30-Second live loop interval for syncing with the cloud portal
+    // Fire immediate data fetch, then repeat cleanly every 30 seconds
+    syncTelemetryFromBackend();
     setInterval(() => {
         syncTelemetryFromBackend();
     }, 30000);
@@ -161,12 +161,11 @@ async function syncTelemetryFromBackend() {
     const pass = document.getElementById("net-portal-pass").value;
 
     if (!appId || !appSecret || !email || !pass) {
-        evaluateAndPrintCleanLog("STANDBY: Input credentials in Priority Tab to authorize live Sync.");
+        evaluateAndPrintCleanLog("STANDBY: Input inverter credentials in Tab 3 to map live data streams.");
         return;
     }
 
     try {
-        // Post credentials to your dynamic Render sync engine
         const response = await fetch(`${RENDER_BACKEND_URL}/sync`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -184,27 +183,30 @@ async function syncTelemetryFromBackend() {
 
         if (data.status === "success") {
             const measurements = data.measurements || data.telemetry || {};
-            liveTelemetry.basePv = parseFloat(measurements.PV_Generation_W || measurements.PV_Power_W || measurements.PV_Power || 0);
-            liveTelemetry.batterySoc = parseInt(measurements.Battery_SOC || measurements.battery_soc || 100);
-            liveTelemetry.gridPower = parseFloat(measurements.Grid_Power_W || measurements.Grid_Power || 0);
+            liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W || measurements.PV_Power_W || measurements.generationPower || 0);
+            liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC || measurements.battery_soc || measurements.batterySOC || 100);
+            liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W || measurements.usePower || 0);
             
-            // Apply offset calculation
+            // Apply layout offset safely over live base parameters
             let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
             liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
             
-            evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry loaded. Solar=${liveTelemetry.calculatedPv}W, SOC=${liveTelemetry.batterySoc}%`);
+            evaluateAndPrintCleanLog(`LIVE REFRESH: Deye telemetry synchronized. Solar=${liveTelemetry.calculatedPv}W, SOC=${liveTelemetry.batterySoc}%`);
             executeMasterSync();
         } else {
-            evaluateAndPrintCleanLog(`SYNC ERROR: Backend returned error - ${data.message}`);
+            evaluateAndPrintCleanLog(`SYNC ERROR: Backend failure response: ${data.message}`);
         }
     } catch (e) {
-        console.error("DCS Link Connection Failure:", e);
-        evaluateAndPrintCleanLog(`CONNECTION ERROR: Unable to parse response from Render backend. Retrying...`);
+        console.error("DCS Link Layer Error:", e);
+        evaluateAndPrintCleanLog(`CONNECTION TIMEOUT: Render server compiling or sleeping. Re-linking framework...`);
     }
 }
 
+function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
+function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
+
 // ==========================================
-// 🔁 ENGINE CALCULATE INTERLOCK AND SEQUENCER RUNS
+// 🔁 AUTOMATION DECISION RULES CORE RUNNER
 // ==========================================
 function executeMasterSync() {
     document.getElementById("pv-power").innerText = `${liveTelemetry.calculatedPv} W`;
@@ -213,18 +215,25 @@ function executeMasterSync() {
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
     let statusTag = document.getElementById("vector-status-tag");
-    let th = configMatrix.global.dischargeTh;
-    let isTrueDischarging = (liveTelemetry.batteryCurrent > th) && (!liveTelemetry.isCharging);
+    
+    // Check if system is currently operating in daytime matrix rules window
+    let currentHour = new Date().getHours();
+    let startHour = parseInt(configMatrix.global.timeStart.split(":")[0]) || 6;
+    let endHour = parseInt(configMatrix.global.timeEnd.split(":")[0]) || 18;
+    let isDay = (currentHour >= startHour && currentHour < endHour);
 
-    if (isTrueDischarging) {
-        statusTag.innerText = "🪫 DISCHARGING STATE (MANUAL OVERRIDE HARD LOCK)";
+    if (!isDay) {
+        statusTag.innerText = "🌙 NIGHT INTERLOCK STANDBY MODE ACTIVE";
         statusTag.className = "vector-tag vector-discharging";
-        ['DO1', 'DO2', 'DO3', 'DO4', 'DO5'].forEach(ch => {
-            if (!configMatrix.overrides[ch]) currentOutputStates[ch] = false;
-        });
-        evaluateAndPrintCleanLog("CRITICAL STANDBY: True battery drainage detected. Discoupling logic tracks. Shifting outputs to safety base values.");
+        
+        // Enforce safe night fallbacks across virtual matrix
+        ['DO1', 'DO2', 'DO3', 'DO4', 'DO5'].forEach(ch => { if (!configMatrix.overrides[ch]) currentOutputStates[ch] = false; });
+        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.high;
+        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.high;
+        
+        evaluateAndPrintCleanLog(`NIGHT STANDBY: Active ruleset suspended until ${configMatrix.global.timeStart}. All relays safe.`);
     } else {
-        statusTag.innerText = "🔋 CHARGING / FULL IDLE (AUTOMATIC SCHEDULER ACTIVE)";
+        statusTag.innerText = "🔋 DAY SOLAR OPTIMIZATION ACTIVE (LIVE FEED)";
         statusTag.className = "vector-tag vector-charging";
         processAutomatedStagingSequence();
     }
@@ -235,26 +244,28 @@ function processAutomatedStagingSequence() {
     let power = liveTelemetry.calculatedPv;
     let db = configMatrix.global.deadband;
     
-    // Day logic based on ruleset low, mid, max excess values
-    if (power > (4000 + db)) {
-        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
-        if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = true;
-        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.lowlow;
-        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.lowlow;
-    } else if (power < (1200 - db)) {
+    // Strict duplication alignment of your July 14 Beta 6 logic steps
+    if (power < (1200 - db)) {
         if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = false;
         if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
         if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.high;
         if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.high;
+        evaluateAndPrintCleanLog(`TIER 1 (LOW SUN): Generation ${intSafe(power)}W below threshold. Holding High SP profile.`);
+    } else if (power >= 4000) {
+        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
+        if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = true;
+        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.lowlow;
+        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.lowlow;
+        evaluateAndPrintCleanLog(`TIER 4 (MASSIVE EXCESS): High production at ${intSafe(power)}W. Virtual thermal banking enabled.`);
     } else {
-        let msg = `DCS NORMAL: Plant metrics stable within deadband envelope. Solar running at ${power}W.`;
-        if (lastRecordedAction.startsWith("DCS NORMAL")) lastRecordedAction = msg; 
+        let msg = `DCS STABLE: Solar plant inside operational window at ${intSafe(power)}W. Keeping auto status constant.`;
+        if (lastRecordedAction.startsWith("DCS STABLE")) lastRecordedAction = msg; 
         evaluateAndPrintCleanLog(msg);
     }
 }
 
 // ==========================================
-// ⚙️ RENDERING HMI ELEMENTS
+// ⚙️ RENDERING HMI INTERFACE FUNCTIONS
 // ==========================================
 function renderMatrixRackTable() {
     const tbody = document.getElementById("matrix-rack-body");
@@ -342,9 +353,6 @@ function renderChannelConfigPage() {
     }
 }
 
-// ==========================================
-// 💾 CONFIG COMMIT SECURE SAVING
-// ==========================================
 function commitMatrixConfig() {
     const isAO = currentChannel.startsWith('AO');
     configMatrix.customNames[currentChannel] = document.getElementById("cfg-custom-name").value || currentChannel;
@@ -381,15 +389,10 @@ function commitMatrixConfig() {
     localStorage.setItem("dcs_portal_user", document.getElementById("net-portal-user").value);
     localStorage.setItem("dcs_portal_pass", document.getElementById("net-portal-pass").value);
 
-    logEvent(`SYS RECONFIG: Client profile compiled and saved locally to offline LocalStorage matrix.`);
-    
-    // Trigger immediate background sync request upon click
+    logEvent(`SYS RECONFIG: Setup committed. Profile synced.`);
     syncTelemetryFromBackend();
 }
 
-// ==========================================
-// 📋 DE-DUPLICATED PRINT LOG TERMINAL
-// ==========================================
 function evaluateAndPrintCleanLog(logMessage) {
     if (logMessage === lastRecordedAction) return;
     lastRecordedAction = logMessage;
@@ -408,18 +411,12 @@ function logEvent(desc) {
             <div class="event-desc">${desc}</div>
         </div>
     `;
-    
     container.innerHTML = row + container.innerHTML;
-    while (container.children.length > 100) {
-        container.removeChild(container.lastChild);
-    }
+    while (container.children.length > 100) { container.removeChild(container.lastChild); }
 }
 
-// ==========================================
-// 📦 PWA SERVICE WORKER REGISTRATION
-// ==========================================
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("DCS Optimization Kernel: Service Worker Registered cleanly."))
-        .catch((err) => console.error("DCS Kernel Error: Service Worker registration failed:", err));
+        .then(() => console.log("Service Worker Active."))
+        .catch((err) => console.error("Worker failed:", err));
 }
