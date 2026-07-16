@@ -30,7 +30,7 @@
 
         .container { width: 100%; max-width: 480px; }
 
-        /* SECURITY PIN WALL */
+        /* SECURITY PASSCODE LAYER */
         #auth-screen {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-color);
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
@@ -43,7 +43,7 @@
         }
         .key:active { background-color: #333; }
 
-        /* NAVIGATION TABS */
+        /* TABS NAVIGATION */
         .tab-bar {
             display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 10px;
             border: 1px solid var(--border-color); padding: 4px; width: 100%;
@@ -61,41 +61,42 @@
         .card { background-color: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); position: relative; box-sizing: border-box; }
         .card-title { font-size: 0.78rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; }
         
-        /* EXTENDED SYNOPTIC FLOW CONTAINER */
-        .synoptic-wrapper { position: relative; width: 100%; height: 280px; background: #141414; border-radius: 8px; border: 1px solid #252525; padding: 12px; box-sizing: border-box; }
+        /* OPTIMIZED SYNOPTIC VIEW COORDINATES WITH EXTENDED ANIMATION CHANNELS */
+        .synoptic-wrapper { position: relative; width: 100%; height: 300px; background: #141414; border-radius: 8px; border: 1px solid #252525; padding: 10px; box-sizing: border-box; overflow: hidden; }
         .synoptic-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         
-        /* Solid pipeline styling */
-        .flow-path { fill: none; stroke: #2f2f2f; stroke-width: 2.5; stroke-linecap: round; }
+        /* Crisp Visible Connector Paths with directional motion animation dashes */
+        .flow-path { fill: none; stroke: #2a2a2a; stroke-width: 2.5; stroke-dasharray: 6 5; stroke-linecap: round; }
+        .flow-path.active-out { stroke: var(--accent-blue); animation: flowDash 1s linear infinite; }
+        .flow-path.active-in { stroke: var(--accent-green); animation: flowDashBack 1s linear infinite; }
         
-        /* Animated Flow Bubbles tracking path maps */
-        .animated-bubble { fill: #ffffff; opacity: 0; }
-        .animated-bubble.active { opacity: 1; }
+        @keyframes flowDash { to { stroke-dashoffset: -22; } }
+        @keyframes flowDashBack { to { stroke-dashoffset: 22; } }
 
-        /* RESPONSIVE COORD GRID LAYER WITH WIDER ROW GAP FOR LONGER CONNECTOR PATHS */
-        .syn-grid-layer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 50px 16px; position: relative; z-index: 2; height: 100%; align-content: center; }
+        /* Unified Layout grid nodes Layer */
+        .syn-grid-layer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 60px 16px; position: relative; z-index: 2; height: 100%; align-content: center; }
         .syn-node {
             background: #1c1c1c; border: 1px solid #333333; border-radius: 8px;
             padding: 8px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; height: 72px; box-sizing: border-box; box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            text-align: center; height: 75px; box-sizing: border-box; box-shadow: 0 4px 8px rgba(0,0,0,0.4);
         }
         .syn-lbl { font-size: 0.62rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
-        .syn-val { font-size: 0.85rem; font-weight: bold; margin-top: 3px; }
+        .syn-val { font-size: 0.85rem; font-weight: bold; margin-top: 2px; }
 
-        /* OPTIMIZED SMALL OVERVIEW INVERTER COMPONENT FOR LENGTHENING VISIBLE LINE CHANNELS */
-        .syn-node-inverter {
-            background: #14172b; border: 2px solid #9c27b0; border-radius: 8px;
+        /* OPTIMIZED SMALL CENTERED INVERTER BOX FOR PATH ELONGATION */
+        .syn-node-inverter-small {
+            background: #1a1e36; border: 2px solid #b39ddb; border-radius: 8px;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             text-align: center; grid-column: 2; grid-row: 1 / span 2; 
-            height: 60px; width: 70px; align-self: center; justify-self: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            height: 60px; width: 60px; align-self: center; justify-self: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 3;
         }
 
         .vector-tag { font-size: 0.72rem; font-weight: bold; padding: 5px; border-radius: 4px; margin-top: 10px; text-align: center; }
         .vector-charging { background: rgba(76, 175, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(76, 175, 80, 0.4); }
         .vector-discharging { background: rgba(244, 67, 54, 0.12); color: var(--status-off); border: 1px solid rgba(244, 67, 54, 0.4); }
 
-        /* DATA DISPLAY MATRIX */
+        /* REGISTER DATA TABLE */
         .matrix-w { width: 100%; overflow-x: auto; }
         .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
         .matrix-table th { color: var(--text-sub); padding: 6px 2px; border-bottom: 1px solid var(--border-color); text-align: left; }
@@ -123,12 +124,6 @@
         .slider-sw:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
         input:checked + .slider-sw { background-color: var(--accent-green); }
         input:checked + .slider-sw:before { transform: translateX(20px); }
-
-        .event-log-container { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
-        .event-row { background: #141414; border-left: 3px solid var(--accent-blue); padding: 8px; border-radius: 4px; font-family: monospace; }
-        .event-time { font-size: 0.65rem; color: var(--accent-green); }
-        .event-desc { font-size: 0.72rem; color: #dddddd; margin-top: 2px; }
-        .name-input { background: #121212; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 0.85rem; margin-bottom: 12px; }
     </style>
 </head>
 <body>
@@ -155,52 +150,28 @@
             <button class="tab-btn" onclick="switchTab('priority-tab', this)">🚦 Priority Matrix</button>
         </div>
 
-        <!-- TAB 1: MONITOR -->
+        <!-- TAB 1: DCS MONITOR DASHBOARD -->
         <div id="monitor-tab" class="tab-content active">
             <div class="card" style="padding:8px;">
-                <div class="card-title" style="margin-bottom:8px;">Synoptic Process Flow</div>
+                <div class="card-title" style="margin-bottom:8px;">Synoptic Flow workbench</div>
                 
                 <div class="synoptic-wrapper">
-                    <!-- Fully mapped SVG overlay template handling elongated vector paths and dynamic bubbles -->
-                    <svg class="synoptic-svg" viewBox="0 0 360 260" preserveAspectRatio="none">
-                        <!-- Solar to Inverter -->
-                        <path id="path-pv" d="M 65,55 L 180,55 L 180,130" class="flow-path"></path>
-                        <!-- Inverter to Grid -->
-                        <path id="path-grid-out" d="M 180,130 L 180,55 L 295,55" class="flow-path"></path>
-                        <!-- Grid to Inverter -->
-                        <path id="path-grid-in" d="M 295,55 L 180,55 L 180,130" class="flow-path"></path>
-                        <!-- Inverter to Battery -->
-                        <path id="path-bat-in" d="M 180,130 L 180,205 L 65,205" class="flow-path"></path>
-                        <!-- Battery to Inverter -->
-                        <path id="path-bat-out" d="M 65,205 L 180,205 L 180,130" class="flow-path"></path>
-                        <!-- Inverter to Load -->
-                        <path id="path-load" d="M 180,130 L 180,205 L 295,205" class="flow-path"></path>
-
-                        <!-- Moving Fluid Bubbles (circles) tracking path maps -->
-                        <circle id="bubble-pv" r="4.5" class="animated-bubble" fill="var(--accent-orange)">
-                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 65,55 L 180,55 L 180,130" />
-                        </circle>
-                        <circle id="bubble-grid-out" r="4.5" class="animated-bubble" fill="var(--accent-blue)">
-                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 180,130 L 180,55 L 295,55" />
-                        </circle>
-                        <circle id="bubble-grid-in" r="4.5" class="animated-bubble" fill="var(--status-off)">
-                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 295,55 L 180,55 L 180,130" />
-                        </circle>
-                        <circle id="bubble-bat-in" r="4.5" class="animated-bubble" fill="var(--accent-green)">
-                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 180,130 L 180,205 L 65,205" />
-                        </circle>
-                        <circle id="bubble-bat-out" r="4.5" class="animated-bubble" fill="#9c27b0">
-                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 65,205 L 180,205 L 180,130" />
-                        </circle>
-                        <circle id="bubble-load" r="4.5" class="animated-bubble" fill="#e91e63">
-                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 180,130 L 180,205 L 295,205" />
-                        </circle>
+                    <!-- Dynamic responsive SVG pathway layer with elongated visible channels -->
+                    <svg class="synoptic-svg" viewBox="0 0 320 260" preserveAspectRatio="none">
+                        <!-- Upper Left: Solar to Inverter core -->
+                        <path id="path-pv" d="M 50,55 L 160,55 L 160,130" class="flow-path"></path>
+                        <!-- Upper Right: Grid to Inverter core -->
+                        <path id="path-grid" d="M 270,55 L 160,55 L 160,130" class="flow-path"></path>
+                        <!-- Lower Left: Inverter core to Battery unit -->
+                        <path id="path-bat" d="M 160,130 L 160,205 L 50,205" class="flow-path"></path>
+                        <!-- Lower Right: Inverter core to Household Load -->
+                        <path id="path-load" d="M 160,130 L 160,205 L 270,205" class="flow-path"></path>
                     </svg>
 
-                    <!-- Balanced layout blocks with a small centered inverter box -->
+                    <!-- Optimized uniform layout component node grid layer -->
                     <div class="syn-grid-layer">
-                        <!-- Box 1: Solar -->
-                        <div class="syn-node" style="border-color: var(--accent-orange); grid-column:1; grid-row:1;">
+                        <!-- Node 1: Solar -->
+                        <div class="syn-node" style="border-color: var(--accent-orange);">
                             <span class="syn-lbl">Solar</span>
                             <span id="lbl-pv" class="syn-val" style="color: var(--accent-orange);">0.00 kW</span>
                         </div>
@@ -208,26 +179,27 @@
                         <!-- Empty structural spacer alignment -->
                         <div></div>
                         
-                        <!-- Box 2: Grid -->
-                        <div class="syn-node" style="border-color: var(--accent-blue); grid-column:3; grid-row:1;">
+                        <!-- Node 2: Grid -->
+                        <div class="syn-node" style="border-color: var(--accent-blue);">
                             <span class="syn-lbl">Grid</span>
                             <span id="lbl-grid" class="syn-val" style="color: var(--accent-blue);">0 W</span>
                         </div>
                         
-                        <!-- Box 3: Optimized Small Core Inverter Box Component -->
-                        <div class="syn-node-inverter">
-                            <span class="syn-lbl" style="color:#b39ddb; font-weight: bold; font-size: 0.55rem;">DEYE</span>
-                            <span style="color:#b39ddb; font-size:0.55rem; font-family:monospace; margin-top:2px; opacity:0.8;">8k Box</span>
+                        <!-- OPTIMIZED SMALL CENTERED CORE INVERTER UNIT -->
+                        <div class="syn-node-inverter-small">
+                            <span class="syn-lbl" style="color:#b39ddb; font-weight:bold; font-size:0.5rem; opacity:0.8;">DEYE</span>
+                            <span style="color:#b39ddb; font-size:0.6rem; font-family:monospace; margin-top:2px;">8k Box</span>
                         </div>
                         
-                        <!-- Box 4: Battery -->
-                        <div class="syn-node" style="border-color: var(--accent-green); grid-column:1; grid-row:2;">
-                            <span id="lbl-soc" class="syn-lbl" style="color: var(--accent-green); font-weight:bold;">100%</span>
+                        <!-- Node 3: Battery unit -->
+                        <div class="syn-node" style="border-color: var(--accent-green);">
+                            <span class="syn-lbl" style="font-weight:bold; color:var(--text-main);">BATTERY UNIT</span>
+                            <span id="lbl-soc" class="syn-lbl" style="color: var(--accent-green); font-weight:bold; font-size:0.8rem; margin-top:1px;">100% SOC</span>
                             <span id="lbl-bat" class="syn-val" style="color: var(--accent-green);">0.00 kW</span>
                         </div>
                         
-                        <!-- Box 5: Load -->
-                        <div class="syn-node" style="border-color: #e91e63; grid-column:3; grid-row:2;">
+                        <!-- Node 4: Load -->
+                        <div class="syn-node" style="border-color: #e91e63;">
                             <span class="syn-lbl">Load</span>
                             <span id="lbl-load" class="syn-val" style="color: #e91e63;">0 W</span>
                         </div>
@@ -257,10 +229,10 @@
             </div>
         </div>
 
-        <!-- TAB 2: DEVICE ASSET CONFIGURATION -->
+        <!-- TAB 2: DEVICE CONFIG -->
         <div id="config-tab" class="tab-content">
             <div class="card">
-                <div class="card-title">Select Output Channel</div>
+                <div class="card-title">Select Channel to Configure</div>
                 <div class="chip-grid">
                     <div class="chip active" onclick="selectConfigChannel('AO1', this)">AO1</div>
                     <div class="chip" onclick="selectConfigChannel('AO2', this)">AO2</div>
@@ -280,7 +252,7 @@
             <div class="card">
                 <div class="card-title"><span id="config-target-title">AO1 Settings</span></div>
                 <label style="font-size:0.7rem; color:var(--text-sub); display:block; margin-bottom:4px;">Custom Asset Description Tag</label>
-                <input type="text" id="cfg-custom-name" class="name-input">
+                <input type="text" id="cfg-custom-name" class="name-input" placeholder="Enter hardware label...">
 
                 <div class="switch-row">
                     <div><div style="font-size:0.8rem; font-weight:bold;">Manual Override (Hand Mode)</div></div>
@@ -305,19 +277,19 @@
 
                 <div id="cfg-do-priority-block" style="display:none;">
                     <div class="step-container">
-                        <div class="step-label">Sequence Queue (1-5)</div>
+                        <div class="step-label">Sequence Queue Priority (1-5)</div>
                         <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-priority', -1, 1, 5)">-</button><input type="number" id="cfg-priority" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-priority', 1, 1, 5)">+</button></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 3: MASTER CONFIG MATRIX -->
+        <!-- TAB 3: MATRIX ARRAYS -->
         <div id="priority-tab" class="tab-content">
             <div class="card">
                 <div class="card-title">Inverter Link Credentials</div>
                 <label style="font-size:0.65rem; color:var(--text-sub);">Inverter Serial Number (SN)</label>
-                <input type="text" id="net-inv-sn" class="name-input">
+                <input type="text" id="net-inv-sn" class="name-input" placeholder="e.g., 230XXXXXXXX">
                 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                     <div><label style="font-size:0.65rem; color:var(--text-sub);">App ID</label><input type="text" id="net-app-id" class="name-input"></div>
@@ -344,8 +316,8 @@
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-deadband', -25, 50, 500)">-</button><input type="number" id="mat-deadband" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-deadband', 25, 50, 500)">+</button></div>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                    <div><label style="font-size:0.65rem; color:var(--text-sub);">Start Time</label><input type="time" id="mat-time-start" style="width:100%; height:32px; background:#161616; border:1px solid var(--border-color); color:white; border-radius:4px;"></div>
-                    <div><label style="font-size:0.65rem; color:var(--text-sub);">End Time</label><input type="time" id="mat-time-end" style="width:100%; height:32px; background:#161616; border:1px solid var(--border-color); color:white; border-radius:4px;"></div>
+                    <div><label style="font-size:0.65rem; color:var(--text-sub);">Start Optimization Time</label><input type="time" id="mat-time-start" style="width:100%; height:32px; background:#161616; border:1px solid var(--border-color); color:white; border-radius:4px;"></div>
+                    <div><label style="font-size:0.65rem; color:var(--text-sub);">Night Standby Time</label><input type="time" id="mat-time-end" style="width:100%; height:32px; background:#161616; border:1px solid var(--border-color); color:white; border-radius:4px;"></div>
                 </div>
             </div>
         </div>
