@@ -112,9 +112,6 @@ function loadGlobalPriorityInputs() {
     document.getElementById("mat-time-end").value = configMatrix.global.timeEnd;
 }
 
-// ==========================================
-// 📡 SYNC AND PARSE RECTIFICATION LAYER
-// ==========================================
 async function syncTelemetryFromBackend() {
     const invSn = document.getElementById("net-inv-sn").value;
     const appId = document.getElementById("net-app-id").value;
@@ -139,20 +136,15 @@ async function syncTelemetryFromBackend() {
         if (data.status === "success") {
             const measurements = data.measurements || data.telemetry || {};
             
-            // 🌟 FIXED KEY-MAPPING ALIGNMENT WITH YOUR DYNAMIC PYTHON OUTPUTS
             liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W ?? measurements.PV_Power_W ?? 0);
             liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC ?? 100);
-            
-            // Extract the direct live parameters parsed straight from your inverter dictionary 
-            liveTelemetry.calculatedLoad = floatSafe(measurements.usePower ?? 652);
-            
-            // Extract Grid power dynamically; use default 0 if none is reported
-            liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W ?? 0);
+            liveTelemetry.calculatedLoad = floatSafe(measurements.usePower ?? measurements.House_Load_W ?? 652);
+            liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W ?? measurements.Grid_Import_W ?? 0);
 
             let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
             liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
             
-            // Determine relative battery direction parameters
+            // Battery power balance matrix calculation rules tracks
             liveTelemetry.batteryPower = liveTelemetry.calculatedPv - liveTelemetry.calculatedLoad - liveTelemetry.gridPower;
 
             evaluateAndPrintCleanLog(`LIVE REFRESH: Telemetry loaded. Solar=${liveTelemetry.calculatedPv}W, Load=${liveTelemetry.calculatedLoad}W`);
@@ -169,30 +161,39 @@ function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
 function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
 
 // ==========================================
-// 🔁 ENGINE CALCULATE INTERLOCK AND SEQUENCER RUNS
+// 🔁 SVG LINE PATHWAYS DIRECTION MATRICES
 // ==========================================
 function executeMasterSync() {
-    // 1. Text elements layout updates
     document.getElementById("lbl-pv").innerText = `${(liveTelemetry.calculatedPv / 1000).toFixed(2)} kW`;
     document.getElementById("lbl-soc").innerText = `${liveTelemetry.batterySoc}%`;
     document.getElementById("lbl-grid").innerText = `${liveTelemetry.gridPower} W`;
     document.getElementById("lbl-load").innerText = `${liveTelemetry.calculatedLoad} W`;
     
-    // Convert power values to kW string layout display matching the Deye synoptic model
     let batKw = (Math.abs(liveTelemetry.batteryPower) / 1000).toFixed(2);
     document.getElementById("lbl-bat").innerText = `${liveTelemetry.batteryPower < 0 ? '-' : ''}${batKw} kW`;
-    
     document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
 
-    // 2. Responsive visual animation path drivers
-    toggleFlowDot("dot-pv", liveTelemetry.calculatedPv > 50);
-    toggleFlowDot("dot-grid-out", liveTelemetry.gridPower > 50);
-    toggleFlowDot("dot-grid-in", liveTelemetry.gridPower < -50);
-    toggleFlowDot("dot-load", liveTelemetry.calculatedLoad > 50);
+    // Manage SVG component line dash animations dynamically based on direction vectors
+    updatePathAnimation("path-pv", liveTelemetry.calculatedPv > 50, "active-out");
+    updatePathAnimation("path-load", liveTelemetry.calculatedLoad > 50, "active-out");
+    
+    // Grid paths
+    if (liveTelemetry.gridPower > 50) {
+        updatePathAnimation("path-grid", true, "active-in");  // Import from grid
+    } else if (liveTelemetry.gridPower < -50) {
+        updatePathAnimation("path-grid", true, "active-out"); // Export to grid
+    } else {
+        updatePathAnimation("path-grid", false);
+    }
 
-    // Battery path tracking direction logic
-    toggleFlowDot("dot-bat-in", liveTelemetry.batteryPower > 50);  // Charging
-    toggleFlowDot("dot-bat-out", liveTelemetry.batteryPower < -50); // Discharging
+    // Battery charging vs discharging animations lines paths
+    if (liveTelemetry.batteryPower > 50) {
+        updatePathAnimation("path-bat", true, "active-out"); // Charging direction path
+    } else if (liveTelemetry.batteryPower < -50) {
+        updatePathAnimation("path-bat", true, "active-in");  // Discharging direction path
+    } else {
+        updatePathAnimation("path-bat", false);
+    }
 
     let statusTag = document.getElementById("vector-status-tag");
     let currentHour = new Date().getHours();
@@ -209,9 +210,10 @@ function executeMasterSync() {
     renderMatrixRackTable();
 }
 
-function toggleFlowDot(id, active) {
-    const el = document.getElementById(id);
-    if (el) el.className = active ? `flow-dot ${el.classList[1]} flow-active` : `flow-dot ${el.classList[1]}`;
+function updatePathAnimation(id, active, className = "") {
+    const p = document.getElementById(id);
+    if (!p) return;
+    p.className.baseVal = active ? `flow-path ${className}` : "flow-path";
 }
 
 function processAutomatedStagingSequence() {
