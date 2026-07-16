@@ -30,7 +30,7 @@
 
         .container { width: 100%; max-width: 480px; }
 
-        /* SECURITY PASSCODE WALL */
+        /* SECURITY PIN WALL */
         #auth-screen {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-color);
             display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
@@ -43,7 +43,7 @@
         }
         .key:active { background-color: #333; }
 
-        /* TABS NAVIGATION */
+        /* NAVIGATION TABS */
         .tab-bar {
             display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 10px;
             border: 1px solid var(--border-color); padding: 4px; width: 100%;
@@ -61,24 +61,23 @@
         .card { background-color: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); position: relative; box-sizing: border-box; }
         .card-title { font-size: 0.78rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; }
         
-        /* UNIFORM SYNOPTIC FLOW MATRIX PACK */
-        .synoptic-wrapper { position: relative; width: 100%; height: 260px; background: #141414; border-radius: 8px; border: 1px solid #252525; padding: 12px; box-sizing: border-box; }
+        /* UNIFORM FLOW GRAPH WORKBENCH */
+        .synoptic-wrapper { position: relative; width: 100%; height: 280px; background: #141414; border-radius: 8px; border: 1px solid #252525; padding: 12px; box-sizing: border-box; }
         .synoptic-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
         
-        /* Crisp Visible Connector Paths */
-        .flow-path { fill: none; stroke: #2a2a2a; stroke-width: 2; stroke-dasharray: 4 4; }
-        .flow-path.active-out { stroke: var(--accent-blue); animation: flowMove 2s linear infinite; stroke-dasharray: 6 3; }
-        .flow-path.active-in { stroke: var(--accent-green); animation: flowMoveBack 2s linear infinite; stroke-dasharray: 6 3; }
+        /* Solid pipeline styling */
+        .flow-path { fill: none; stroke: #2f2f2f; stroke-width: 2.5; stroke-linecap: round; }
         
-        @keyframes flowMove { to { stroke-dashoffset: -18; } }
-        @keyframes flowMoveBack { to { stroke-dashoffset: 18; } }
+        /* Animated Flow Bubbles tracking paths */
+        .animated-bubble { fill: #ffffff; opacity: 0; }
+        .animated-bubble.active { opacity: 1; }
 
-        /* Completely Uniform Layout Nodes */
-        .syn-grid-layer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px 16px; position: relative; z-index: 2; height: 100%; align-content: center; }
+        /* Completely Uniform HTML Grid Node Elements */
+        .syn-grid-layer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 40px 16px; position: relative; z-index: 2; height: 100%; align-content: center; }
         .syn-node {
             background: #1c1c1c; border: 1px solid #333333; border-radius: 8px;
-            padding: 10px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center; height: 72px; box-sizing: border-box; box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            padding: 8px 2px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; height: 75px; box-sizing: border-box; box-shadow: 0 4px 8px rgba(0,0,0,0.4);
         }
         .syn-lbl { font-size: 0.62rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 0.5px; }
         .syn-val { font-size: 0.85rem; font-weight: bold; margin-top: 3px; }
@@ -87,7 +86,7 @@
         .vector-charging { background: rgba(76, 175, 80, 0.12); color: var(--accent-green); border: 1px solid rgba(76, 175, 80, 0.4); }
         .vector-discharging { background: rgba(244, 67, 54, 0.12); color: var(--status-off); border: 1px solid rgba(244, 67, 54, 0.4); }
 
-        /* REGISTER DATA TABLE */
+        /* DATA MATRIX DISPLAY TABLE */
         .matrix-w { width: 100%; overflow-x: auto; }
         .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
         .matrix-table th { color: var(--text-sub); padding: 6px 2px; border-bottom: 1px solid var(--border-color); text-align: left; }
@@ -147,54 +146,79 @@
             <button class="tab-btn" onclick="switchTab('priority-tab', this)">🚦 Priority Matrix</button>
         </div>
 
-        <!-- TAB 1: DASHBOARD -->
+        <!-- TAB 1: MONITOR -->
         <div id="monitor-tab" class="tab-content active">
             <div class="card" style="padding:8px;">
                 <div class="card-title" style="margin-bottom:8px;">Synoptic Process Flow</div>
                 
                 <div class="synoptic-wrapper">
-                    <!-- Dynamic responsive SVG pathway layer -->
-                    <svg class="synoptic-svg" viewBox="0 0 300 200" preserveAspectRatio="none">
-                        <!-- Top left to center -->
-                        <path id="path-pv" d="M 50,50 L 150,50 L 150,100" class="flow-path"></path>
-                        <!-- Center to top right -->
-                        <path id="path-grid" d="M 150,100 L 150,50 L 250,50" class="flow-path"></path>
-                        <!-- Bottom left to center -->
-                        <path id="path-bat" d="M 50,150 L 150,150 L 150,100" class="flow-path"></path>
-                        <!-- Center to bottom right -->
-                        <path id="path-load" d="M 150,100 L 150,150 L 250,150" class="flow-path"></path>
+                    <!-- Fully mapped SVG overlay template handling pipeline logic and dynamic bubbles -->
+                    <svg class="synoptic-svg" viewBox="0 0 360 260" preserveAspectRatio="none">
+                        <!-- Mapped Paths definitions -->
+                        <!-- Solar to Inverter -->
+                        <path id="path-pv" d="M 65,65 L 180,65 L 180,130" class="flow-path"></path>
+                        <!-- Inverter to Grid -->
+                        <path id="path-grid-out" d="M 180,130 L 180,65 L 295,65" class="flow-path"></path>
+                        <!-- Grid to Inverter -->
+                        <path id="path-grid-in" d="M 295,65 L 180,65 L 180,130" class="flow-path"></path>
+                        <!-- Inverter to Battery -->
+                        <path id="path-bat-in" d="M 180,130 L 180,195 L 65,195" class="flow-path"></path>
+                        <!-- Battery to Inverter -->
+                        <path id="path-bat-out" d="M 65,195 L 180,195 L 180,130" class="flow-path"></path>
+                        <!-- Inverter to Load -->
+                        <path id="path-load" d="M 180,130 L 180,195 L 295,195" class="flow-path"></path>
+
+                        <!-- Moving Fluid Bubbles (circles) tracking path maps -->
+                        <circle id="bubble-pv" r="4.5" class="animated-bubble" fill="var(--accent-orange)">
+                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 65,65 L 180,65 L 180,130" />
+                        </circle>
+                        <circle id="bubble-grid-out" r="4.5" class="animated-bubble" fill="var(--accent-blue)">
+                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 180,130 L 180,65 L 295,65" />
+                        </circle>
+                        <circle id="bubble-grid-in" r="4.5" class="animated-bubble" fill="var(--status-off)">
+                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 295,65 L 180,65 L 180,130" />
+                        </circle>
+                        <circle id="bubble-bat-in" r="4.5" class="animated-bubble" fill="var(--accent-green)">
+                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 180,130 L 180,195 L 65,195" />
+                        </circle>
+                        <circle id="bubble-bat-out" r="4.5" class="animated-bubble" fill="#9c27b0">
+                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 65,195 L 180,195 L 180,130" />
+                        </circle>
+                        <circle id="bubble-load" r="4.5" class="animated-bubble" fill="#e91e63">
+                            <animateMotion dur="2.5s" repeatCount="indefinite" path="M 180,130 L 180,195 L 295,195" />
+                        </circle>
                     </svg>
 
-                    <!-- Clean uniform layout components node grid -->
+                    <!-- Absolutely balanced layout blocks -->
                     <div class="syn-grid-layer">
-                        <!-- Node 1: Solar -->
+                        <!-- Box 1: Solar -->
                         <div class="syn-node" style="border-color: var(--accent-orange); grid-column:1; grid-row:1;">
                             <span class="syn-lbl">Solar</span>
                             <span id="lbl-pv" class="syn-val" style="color: var(--accent-orange);">0.00 kW</span>
                         </div>
                         
-                        <!-- Node 2: Empty Spacer for matching grid alignments -->
+                        <!-- Empty structural spacer alignment -->
                         <div></div>
                         
-                        <!-- Node 3: Grid -->
+                        <!-- Box 2: Grid -->
                         <div class="syn-node" style="border-color: var(--accent-blue); grid-column:3; grid-row:1;">
                             <span class="syn-lbl">Grid</span>
                             <span id="lbl-grid" class="syn-val" style="color: var(--accent-blue);">0 W</span>
                         </div>
                         
-                        <!-- Node 4: Inverter -->
-                        <div class="syn-node" style="border-color: #9c27b0; grid-column:2; grid-row:1 / span 2; height:100%; background:#131525;">
-                            <span class="syn-lbl" style="color:#b39ddb;">DEYE</span>
+                        <!-- Box 3: Inverter (Perfect Core Uniform Alignment) -->
+                        <div class="syn-node" style="border-color: #9c27b0; grid-column:2; grid-row:1 / span 2; height:100%; background:#14172b; border-width: 2px;">
+                            <span class="syn-lbl" style="color:#b39ddb; font-weight: bold;">DEYE</span>
                             <span class="syn-val" style="color:#b39ddb; font-size:0.75rem; margin-top:4px;">Inverter</span>
                         </div>
                         
-                        <!-- Node 5: Battery -->
+                        <!-- Box 4: Battery -->
                         <div class="syn-node" style="border-color: var(--accent-green); grid-column:1; grid-row:2;">
                             <span id="lbl-soc" class="syn-lbl" style="color: var(--accent-green); font-weight:bold;">100%</span>
                             <span id="lbl-bat" class="syn-val" style="color: var(--accent-green);">0.00 kW</span>
                         </div>
                         
-                        <!-- Node 6: Household Load -->
+                        <!-- Box 5: Load -->
                         <div class="syn-node" style="border-color: #e91e63; grid-column:3; grid-row:2;">
                             <span class="syn-lbl">Load</span>
                             <span id="lbl-load" class="syn-val" style="color: #e91e63;">0 W</span>
@@ -280,7 +304,7 @@
             </div>
         </div>
 
-        <!-- TAB 3: MASTER MATRIX CONFIG -->
+        <!-- TAB 3: CONFIG KEYS -->
         <div id="priority-tab" class="tab-content">
             <div class="card">
                 <div class="card-title">Inverter Link Credentials</div>
