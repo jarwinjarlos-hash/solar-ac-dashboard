@@ -1,422 +1,372 @@
-// ==========================================
-// ☀️ CLEAN DEYE DCS AUTOMATION ENGINE (app.js)
-// ==========================================
-
-let currentChannel = 'AO1';
-let pinBuffer = "";
-const VALID_PIN = "1981";
-
-// 🌟 REPLACE WITH YOUR ACTUAL ACTIVE RENDER WEB SERVICE URL
-const RENDER_BACKEND_URL = "https://your-solar-ac-bridge.onrender.com";
-
-let configMatrix = {
-    customNames: {
-        AO1: "Smart AC 1 Setpoint", AO2: "Smart AC 2 Setpoint", AO3: "Spare Analog 3", AO4: "Spare Analog 4", AO5: "Spare Analog 5",
-        DO1: "Smart AC 1 Power", DO2: "Smart AC 2 Power", DO3: "Non-Smart AC Relay", DO4: "Water Heater Relay", DO5: "Water Pump Relay"
-    },
-    overrides: {
-        AO1: false, AO2: false, AO3: false, AO4: false, AO5: false,
-        DO1: false, DO2: false, DO3: false, DO4: false, DO5: false
-    },
-    overrideStates: {
-        AO1: 24, AO2: 24, AO3: 24, AO4: 24, AO5: 24,
-        DO1: false, DO2: false, DO3: false, DO4: false, DO5: false
-    },
-    aoLimits: {
-        AO1: { lowlow: 21, lowmid: 23, highmid: 25, high: 27 },
-        AO2: { lowlow: 21, lowmid: 23, highmid: 25, high: 27 },
-        AO3: { lowlow: 22, lowmid: 24, highmid: 26, high: 28 },
-        AO4: { lowlow: 22, lowmid: 24, highmid: 26, high: 28 },
-        AO5: { lowlow: 22, lowmid: 24, highmid: 26, high: 28 }
-    },
-    priorities: { DO1: 1, DO2: 2, DO3: 3, DO4: 4, DO5: 5 },
-    global: { minSoc: 85, dischargeTh: 150, deadband: 100, delay: 5, timeStart: "08:00", timeEnd: "17:00" }
-};
-
-let liveTelemetry = { basePv: 0, calculatedPv: 0, batterySoc: 100, gridPower: 0, batteryCurrent: 0, isCharging: true };
-let currentOutputStates = { AO1: 24, AO2: 24, AO3: 26, AO4: 26, AO5: 26, DO1: false, DO2: false, DO3: false, DO4: false, DO5: false };
-let lastRecordedAction = "";
-
-const helpStrings = {
-    hand: "Bypasses all automatic solar/battery step calculations. Decouples this specific output channel to give you permanent, hard command over its target values.",
-    offset: "Injects manual offset wattage (+/-) into the runtime environment to simulate shifting cloud cover, changing house loads, or massive generation spikes.",
-    soc: "The minimum battery state-of-charge percentage required to authorize automated execution loops during daytime optimization hours.",
-    discharge: "The minimum wattage draw required to confirm a true battery discharge. Minor draws below this when the battery is at 100% are ignored to shield the sequencer from sensor noise.",
-    deadband: "Symmetric wattage buffer applied to trigger parameters. Stops relays and compressors from rapidly cycling back and forth when solar generation hovers directly on threshold parameters.",
-    delay: "The block-start sequence countdown timer. Forces the system to hold staging for a set number of minutes before energizing the next priority load to mitigate inrush current spikes.",
-    time: "Defines the active daytime tracking window. Outside this range, the system automatically forces into Night Standby, locking out automation for manual discretion.",
-    inverter_creds: "Your personal Deye portal developer credentials. These are stored locally in your browser memory and are used to securely request live data from your inverter without exposing your password in public backend files."
-};
-
-// ==========================================
-// 🔐 HMI AUTHENTICATION LOOP
-// ==========================================
-window.onload = function() {
-    if (sessionStorage.getItem("panel_authenticated") === "true") {
-        document.getElementById("auth-screen").style.display = "none";
-        document.getElementById("main-dashboard").style.display = "block";
-        initApp();
-    }
-};
-
-function appendPin(num) {
-    if (pinBuffer.length < 4) {
-        pinBuffer += num;
-        document.getElementById("pin-display").innerText = "*".repeat(pinBuffer.length);
-    }
-}
-function clearPin() { pinBuffer = ""; document.getElementById("pin-display").innerText = ""; }
-function verifyPin() {
-    if (pinBuffer === VALID_PIN) {
-        sessionStorage.setItem("panel_authenticated", "true");
-        document.getElementById("auth-screen").style.display = "none";
-        document.getElementById("main-dashboard").style.display = "block";
-        initApp();
-    } else {
-        alert("Interlock Denied: Invalid Access Token");
-        clearPin();
-    }
-}
-
-// ==========================================
-// 🗺️ PAGE NAVIGATION AND CONTROLS
-// ==========================================
-function switchTab(tabId, btn) {
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-    btn.classList.add('active');
-}
-
-function selectConfigChannel(ch, chip) {
-    document.querySelectorAll('#config-tab .chip').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    currentChannel = ch;
-    renderChannelConfigPage();
-}
-
-function showHelp(key) {
-    document.getElementById("help-title").innerText = `Parameter Context: [${key.toUpperCase()}]`;
-    document.getElementById("help-text").innerText = helpStrings[key] || "No documentation found.";
-    document.getElementById("help-modal").style.display = "flex";
-}
-function closeHelp() { document.getElementById("help-modal").style.display = "none"; }
-
-function adjustStep(id, delta, min = -5000, max = 10000) {
-    let input = document.getElementById(id);
-    if (!input) return;
-    let currentVal = parseInt(input.value) || 0;
-    let newVal = currentVal + delta;
-    if (newVal >= min && newVal <= max) {
-        input.value = newVal;
-    }
-}
-
-// ==========================================
-// ⚙️ INITIALIZATION & PERSISTENCE
-// ==========================================
-function initApp() {
-    let savedConfig = localStorage.getItem("dcs_client_matrix");
-    if (savedConfig) {
-        try { configMatrix = JSON.parse(savedConfig); } catch(e) { console.error("Config array corrupted."); }
-    }
-    
-    loadGlobalPriorityInputs();
-    renderMatrixRackTable();
-    renderChannelConfigPage();
-    
-    // Load local storage keys from phone vault
-    document.getElementById("net-inv-sn").value = localStorage.getItem("dcs_inv_sn") || "";
-    document.getElementById("net-app-id").value = localStorage.getItem("dcs_app_id") || "";
-    document.getElementById("net-app-secret").value = localStorage.getItem("dcs_app_secret") || "";
-    document.getElementById("net-portal-user").value = localStorage.getItem("dcs_portal_user") || "";
-    document.getElementById("net-portal-pass").value = localStorage.getItem("dcs_portal_pass") || "";
-
-    executeMasterSync();
-    
-    // Fire immediate data fetch, then repeat cleanly every 30 seconds
-    syncTelemetryFromBackend();
-    setInterval(() => {
-        syncTelemetryFromBackend();
-    }, 30000);
-}
-
-function loadGlobalPriorityInputs() {
-    document.getElementById("mat-min-soc").value = configMatrix.global.minSoc;
-    document.getElementById("mat-discharge-th").value = configMatrix.global.dischargeTh;
-    document.getElementById("mat-deadband").value = configMatrix.global.deadband;
-    document.getElementById("mat-delay").value = configMatrix.global.delay;
-    document.getElementById("mat-time-start").value = configMatrix.global.timeStart;
-    document.getElementById("mat-time-end").value = configMatrix.global.timeEnd;
-}
-
-// ==========================================
-// 📡 LIVE BACKEND SYNC BRIDGE LAYER
-// ==========================================
-async function syncTelemetryFromBackend() {
-    const invSn = document.getElementById("net-inv-sn").value;
-    const appId = document.getElementById("net-app-id").value;
-    const appSecret = document.getElementById("net-app-secret").value;
-    const email = document.getElementById("net-portal-user").value;
-    const pass = document.getElementById("net-portal-pass").value;
-
-    if (!appId || !appSecret || !email || !pass) {
-        evaluateAndPrintCleanLog("STANDBY: Input inverter credentials in Tab 3 to map live data streams.");
-        return;
-    }
-
-    try {
-        const response = await fetch(`${RENDER_BACKEND_URL}/sync`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email: email,
-                password: pass,
-                app_id: appId,
-                app_secret: appSecret,
-                inverter_sn: invSn
-            })
-        });
-
-        if (!response.ok) throw new Error(`HTTP Error Status: ${response.status}`);
-        const data = await response.json();
-
-        if (data.status === "success") {
-            const measurements = data.measurements || data.telemetry || {};
-            liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W || measurements.PV_Power_W || measurements.generationPower || 0);
-            liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC || measurements.battery_soc || measurements.batterySOC || 100);
-            liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W || measurements.usePower || 0);
-            
-            // Apply layout offset safely over live base parameters
-            let offset = parseInt(document.getElementById("mat-solar-offset").value) || 0;
-            liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
-            
-            evaluateAndPrintCleanLog(`LIVE REFRESH: Deye telemetry synchronized. Solar=${liveTelemetry.calculatedPv}W, SOC=${liveTelemetry.batterySoc}%`);
-            executeMasterSync();
-        } else {
-            evaluateAndPrintCleanLog(`SYNC ERROR: Backend failure response: ${data.message}`);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar DCS Control Hub</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --accent-green: #4caf50;
+            --accent-blue: #2196f3;
+            --accent-orange: #ff9800;
+            --text-main: #ffffff;
+            --text-sub: #aaaaaa;
+            --border-color: #333333;
+            --status-off: #f44336;
         }
-    } catch (e) {
-        console.error("DCS Link Layer Error:", e);
-        evaluateAndPrintCleanLog(`CONNECTION TIMEOUT: Render server compiling or sleeping. Re-linking framework...`);
-    }
-}
 
-function floatSafe(v) { let f = parseFloat(v); return isNaN(f) ? 0 : f; }
-function intSafe(v) { let i = parseInt(v); return isNaN(i) ? 0 : i; }
-
-// ==========================================
-// 🔁 AUTOMATION DECISION RULES CORE RUNNER
-// ==========================================
-function executeMasterSync() {
-    document.getElementById("pv-power").innerText = `${liveTelemetry.calculatedPv} W`;
-    document.getElementById("battery-soc").innerText = `${liveTelemetry.batterySoc}%`;
-    document.getElementById("grid-power").innerText = `${liveTelemetry.gridPower} W`;
-    document.getElementById("execution-timestamp").innerText = `Last Engine Sync: ${new Date().toLocaleTimeString()}`;
-
-    let statusTag = document.getElementById("vector-status-tag");
-    
-    // Check if system is currently operating in daytime matrix rules window
-    let currentHour = new Date().getHours();
-    let startHour = parseInt(configMatrix.global.timeStart.split(":")[0]) || 6;
-    let endHour = parseInt(configMatrix.global.timeEnd.split(":")[0]) || 18;
-    let isDay = (currentHour >= startHour && currentHour < endHour);
-
-    if (!isDay) {
-        statusTag.innerText = "🌙 NIGHT INTERLOCK STANDBY MODE ACTIVE";
-        statusTag.className = "vector-tag vector-discharging";
-        
-        // Enforce safe night fallbacks across virtual matrix
-        ['DO1', 'DO2', 'DO3', 'DO4', 'DO5'].forEach(ch => { if (!configMatrix.overrides[ch]) currentOutputStates[ch] = false; });
-        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.high;
-        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.high;
-        
-        evaluateAndPrintCleanLog(`NIGHT STANDBY: Active ruleset suspended until ${configMatrix.global.timeStart}. All relays safe.`);
-    } else {
-        statusTag.innerText = "🔋 DAY SOLAR OPTIMIZATION ACTIVE (LIVE FEED)";
-        statusTag.className = "vector-tag vector-charging";
-        processAutomatedStagingSequence();
-    }
-    renderMatrixRackTable();
-}
-
-function processAutomatedStagingSequence() {
-    let power = liveTelemetry.calculatedPv;
-    let db = configMatrix.global.deadband;
-    
-    // Strict duplication alignment of your July 14 Beta 6 logic steps
-    if (power < (1200 - db)) {
-        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = false;
-        if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = false;
-        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.high;
-        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.high;
-        evaluateAndPrintCleanLog(`TIER 1 (LOW SUN): Generation ${intSafe(power)}W below threshold. Holding High SP profile.`);
-    } else if (power >= 4000) {
-        if (!configMatrix.overrides.DO1) currentOutputStates.DO1 = true;
-        if (!configMatrix.overrides.DO2) currentOutputStates.DO2 = true;
-        if (!configMatrix.overrides.AO1) currentOutputStates.AO1 = configMatrix.aoLimits.AO1.lowlow;
-        if (!configMatrix.overrides.AO2) currentOutputStates.AO2 = configMatrix.aoLimits.AO2.lowlow;
-        evaluateAndPrintCleanLog(`TIER 4 (MASSIVE EXCESS): High production at ${intSafe(power)}W. Virtual thermal banking enabled.`);
-    } else {
-        let msg = `DCS STABLE: Solar plant inside operational window at ${intSafe(power)}W. Keeping auto status constant.`;
-        if (lastRecordedAction.startsWith("DCS STABLE")) lastRecordedAction = msg; 
-        evaluateAndPrintCleanLog(msg);
-    }
-}
-
-// ==========================================
-// ⚙️ RENDERING HMI INTERFACE FUNCTIONS
-// ==========================================
-function renderMatrixRackTable() {
-    const tbody = document.getElementById("matrix-rack-body");
-    if (!tbody) return;
-    tbody.innerHTML = "";
-    
-    const channels = ['AO1', 'AO2', 'AO3', 'AO4', 'AO5', 'DO1', 'DO2', 'DO3', 'DO4', 'DO5'];
-    channels.forEach(ch => {
-        const isAO = ch.startsWith('AO');
-        const name = configMatrix.customNames[ch];
-        const isOverride = configMatrix.overrides[ch];
-        const rawState = currentOutputStates[ch];
-        
-        let stateBadge = isAO ? "—" : (rawState ? `<span class="badge badge-on">ON</span>` : `<span class="badge badge-off">OFF</span>`);
-        let setpDisplay = isAO ? `${rawState}°C` : "—";
-        let modeBadge = isOverride ? `<span class="badge badge-hand">HAND</span>` : `<span class="badge badge-auto">AUTO</span>`;
-        let seqDisplay = isAO ? "—" : `P${configMatrix.priorities[ch]}`;
-
-        tbody.innerHTML += `
-            <tr>
-                <td style="font-weight:bold; color:var(--accent-blue);">${ch}</td>
-                <td style="max-width:140px; overflow:hidden; text-overflow:ellipsis;">${name}</td>
-                <td>${stateBadge}</td>
-                <td><span style="font-weight:bold;">${setpDisplay}</span></td>
-                <td>${modeBadge}</td>
-                <td><span style="color:var(--text-sub);">${seqDisplay}</span></td>
-            </tr>
-        `;
-    });
-    renderQueueMappingList();
-}
-
-function renderQueueMappingList() {
-    const container = document.getElementById("queue-mapping-list");
-    if (!container) return;
-    container.innerHTML = "";
-    let priorityMap = {1: [], 2: [], 3: [], 4: [], 5: []};
-    
-    ['DO1', 'DO2', 'DO3', 'DO4', 'DO5'].forEach(ch => {
-        let p = configMatrix.priorities[ch];
-        if (p >= 1 && p <= 5) priorityMap[p].push(`[${ch}] ${configMatrix.customNames[ch]}`);
-    });
-
-    for (let i = 1; i <= 5; i++) {
-        let assets = priorityMap[i].length > 0 ? priorityMap[i].join(" + ") : "EMPTY TRACK";
-        container.innerHTML += `<div><span style="color:var(--accent-orange); font-weight:bold;">STAGE ${i}:</span> ${assets}</div>`;
-    }
-}
-
-function toggleOverrideUI() {
-    const isOverride = document.getElementById("cfg-override-toggle").checked;
-    const isAO = currentChannel.startsWith('AO');
-    if (isAO) {
-        document.getElementById("cfg-ao-limits-block").style.display = "block";
-    } else {
-        document.getElementById("cfg-do-manual-row").style.display = isOverride ? "flex" : "none";
-        document.getElementById("cfg-do-priority-block").style.display = isOverride ? "none" : "block";
-    }
-}
-
-function renderChannelConfigPage() {
-    const isAO = currentChannel.startsWith('AO');
-    document.getElementById("config-target-title").innerText = `${currentChannel} Channel Settings`;
-    document.getElementById("cfg-custom-name").value = configMatrix.customNames[currentChannel];
-    
-    const isOverride = configMatrix.overrides[currentChannel];
-    document.getElementById("cfg-override-toggle").checked = isOverride;
-
-    if (isAO) {
-        document.getElementById("cfg-do-manual-row").style.display = "none";
-        document.getElementById("cfg-do-priority-block").style.display = "none";
-        document.getElementById("cfg-ao-limits-block").style.display = "block";
-        
-        document.getElementById("cfg-sp-lowlow").value = configMatrix.aoLimits[currentChannel].lowlow;
-        document.getElementById("cfg-sp-low-mid").value = configMatrix.aoLimits[currentChannel].lowmid;
-        document.getElementById("cfg-sp-high-mid").value = configMatrix.aoLimits[currentChannel].highmid;
-        document.getElementById("cfg-sp-high").value = configMatrix.aoLimits[currentChannel].high;
-    } else {
-        document.getElementById("cfg-ao-limits-block").style.display = "none";
-        document.getElementById("cfg-do-manual-row").style.display = isOverride ? "flex" : "none";
-        document.getElementById("cfg-do-priority-block").style.display = isOverride ? "none" : "block";
-        
-        document.getElementById("cfg-do-state-toggle").checked = configMatrix.overrideStates[currentChannel];
-        document.getElementById("cfg-priority").value = configMatrix.priorities[currentChannel];
-    }
-}
-
-function commitMatrixConfig() {
-    const isAO = currentChannel.startsWith('AO');
-    configMatrix.customNames[currentChannel] = document.getElementById("cfg-custom-name").value || currentChannel;
-    
-    const isOverride = document.getElementById("cfg-override-toggle").checked;
-    configMatrix.overrides[currentChannel] = isOverride;
-
-    if (isAO) {
-        configMatrix.aoLimits[currentChannel].lowlow = parseInt(document.getElementById("cfg-sp-lowlow").value);
-        configMatrix.aoLimits[currentChannel].lowmid = parseInt(document.getElementById("cfg-sp-low-mid").value);
-        configMatrix.aoLimits[currentChannel].highmid = parseInt(document.getElementById("cfg-sp-high-mid").value);
-        configMatrix.aoLimits[currentChannel].high = parseInt(document.getElementById("cfg-sp-high").value);
-    } else {
-        if (isOverride) {
-            configMatrix.overrideStates[currentChannel] = document.getElementById("cfg-do-state-toggle").checked;
-            currentOutputStates[currentChannel] = configMatrix.overrideStates[currentChannel];
-        } else {
-            configMatrix.priorities[currentChannel] = parseInt(document.getElementById("cfg-priority").value);
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color); color: var(--text-main); margin: 0; padding: 12px;
+            display: flex; flex-direction: column; align-items: center;
+            -webkit-user-select: none; user-select: none;
         }
-    }
 
-    configMatrix.global.minSoc = parseInt(document.getElementById("mat-min-soc").value);
-    configMatrix.global.dischargeTh = parseInt(document.getElementById("mat-discharge-th").value);
-    configMatrix.global.deadband = parseInt(document.getElementById("mat-deadband").value);
-    configMatrix.global.delay = parseInt(document.getElementById("mat-delay").value);
-    configMatrix.global.timeStart = document.getElementById("mat-time-start").value;
-    configMatrix.global.timeEnd = document.getElementById("mat-time-end").value;
+        .container { width: 100%; max-width: 540px; display: none; }
 
-    localStorage.setItem("dcs_client_matrix", JSON.stringify(configMatrix));
-    
-    localStorage.setItem("dcs_inv_sn", document.getElementById("net-inv-sn").value);
-    localStorage.setItem("dcs_app_id", document.getElementById("net-app-id").value);
-    localStorage.setItem("dcs_app_secret", document.getElementById("net-app-secret").value);
-    localStorage.setItem("dcs_portal_user", document.getElementById("net-portal-user").value);
-    localStorage.setItem("dcs_portal_pass", document.getElementById("net-portal-pass").value);
+        /* PASSCODE OVERLAY */
+        #auth-screen {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--bg-color);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999;
+        }
+        .pin-display { font-size: 2.5rem; letter-spacing: 10px; margin-bottom: 24px; height: 50px; color: var(--accent-blue); }
+        .keypad { display: grid; grid-template-columns: repeat(3, 80px); gap: 16px; }
+        .key {
+            width: 80px; height: 80px; background-color: var(--card-bg); border: 1px solid var(--border-color);
+            font-size: 1.8rem; border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer;
+        }
+        .key:active { background-color: #333; }
 
-    logEvent(`SYS RECONFIG: Setup committed. Profile synced.`);
-    syncTelemetryFromBackend();
-}
+        /* NAVIGATION TABS */
+        .tab-bar {
+            display: flex; background: var(--card-bg); border-radius: 8px; margin-bottom: 12px;
+            border: 1px solid var(--border-color); padding: 4px; width: 100%;
+        }
+        .tab-btn {
+            flex: 1; background: transparent; color: var(--text-sub); border: none; padding: 12px 4px;
+            font-size: 0.85rem; font-weight: bold; cursor: pointer; border-radius: 6px; transition: all 0.2s;
+            text-align: center;
+        }
+        .tab-btn.active { background: var(--accent-blue); color: white; }
+        .tab-content { display: none; width: 100%; }
+        .tab-content.active { display: block; width: 100%; }
 
-function evaluateAndPrintCleanLog(logMessage) {
-    if (logMessage === lastRecordedAction) return;
-    lastRecordedAction = logMessage;
-    logEvent(logMessage);
-}
+        /* HMI INDUSTRIAL ELEMENTS */
+        h1 { font-size: 1.3rem; margin: 4px 0; text-align: center; }
+        .timestamp-header { font-size: 0.75rem; color: var(--text-sub); text-align: center; margin-bottom: 12px; }
+        .card { background-color: var(--card-bg); border-radius: 12px; padding: 14px; margin-bottom: 12px; border: 1px solid var(--border-color); position: relative; }
+        .card-title { font-size: 0.8rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+        
+        .metric-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; text-align: center; }
+        .metric-card { background: #181818; padding: 8px; border-radius: 6px; border: 1px solid #252525; }
+        .metric-label { font-size: 0.7rem; color: var(--text-sub); }
+        .metric-value { font-size: 1.25rem; font-weight: bold; margin-top: 4px; }
+        
+        .vector-tag { font-size: 0.75rem; font-weight: bold; padding: 4px 8px; border-radius: 4px; margin-top: 8px; text-align: center; }
+        .vector-charging { background: rgba(76, 175, 80, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+        .vector-discharging { background: rgba(244, 67, 54, 0.15); color: var(--status-off); border: 1px solid var(--status-off); }
 
-function logEvent(desc) {
-    const container = document.getElementById("event-log-terminal");
-    if (!container) return;
-    if (container.innerHTML.includes("Initializing process log")) container.innerHTML = "";
-    
-    const timestamp = new Date().toLocaleTimeString();
-    const row = `
-        <div class="event-row">
-            <div class="event-time">[${timestamp}]</div>
-            <div class="event-desc">${desc}</div>
+        /* HIGH DENSITY MATRIX TABLE */
+        .matrix-w { width: 100%; overflow-x: auto; }
+        .matrix-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; text-align: left; }
+        .matrix-table th { color: var(--text-sub); padding: 8px 4px; border-bottom: 1px solid var(--border-color); font-weight: 600; }
+        .matrix-table td { padding: 10px 4px; border-bottom: 1px solid #252525; white-space: nowrap; }
+        .badge { padding: 2px 5px; border-radius: 4px; font-weight: bold; font-size: 0.7rem; }
+        .badge-on { background: rgba(76, 175, 80, 0.2); color: var(--accent-green); }
+        .badge-off { background: rgba(244, 67, 54, 0.2); color: var(--status-off); }
+        .badge-auto { background: rgba(33, 150, 243, 0.2); color: var(--accent-blue); }
+        .badge-hand { background: rgba(255, 152, 0, 0.2); color: var(--accent-orange); }
+
+        /* CONTROLLER STEPPER FIELD SETS */
+        .step-container { display: flex; align-items: center; justify-content: space-between; background: #181818; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 10px; }
+        .step-label { font-size: 0.82rem; display: flex; align-items: center; gap: 6px; }
+        .step-controls { display: flex; align-items: center; gap: 4px; }
+        .btn-step { width: 36px; height: 36px; background: #2a2a2a; border: 1px solid #444; color: white; font-size: 1.2rem; font-weight: bold; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+        .btn-step:active { background: #444; }
+        .step-input { width: 65px; height: 32px; background: #121212; border: 1px solid var(--border-color); color: white; text-align: center; font-size: 0.9rem; font-weight: bold; border-radius: 4px; }
+
+        /* CHANNEL SELECTOR CHIPS */
+        .chip-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-bottom: 14px; }
+        .chip { background: #252525; padding: 8px 2px; text-align: center; border-radius: 6px; font-size: 0.75rem; border: 1px solid var(--border-color); cursor: pointer; font-weight: bold; }
+        .chip.active { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
+
+        /* TOGGLE OVERRIDE SWITCH */
+        .switch-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #2a2a2a; margin-bottom: 12px; }
+        .switch { position: relative; display: inline-block; width: 46px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider-sw { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #444; transition: .2s; border-radius: 24px; }
+        .slider-sw:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; }
+        input:checked + .slider-sw { background-color: var(--accent-green); }
+        input:checked + .slider-sw:before { transform: translateX(22px); }
+
+        /* TOOLTIP CONTEXT MODAL */
+        .info-btn { background: #2a2a2a; border: none; color: var(--accent-blue); width: 18px; height: 18px; border-radius: 50%; font-size: 0.7rem; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .modal-content { background: var(--card-bg); border: 1px solid var(--border-color); padding: 20px; border-radius: 12px; max-width: 400px; width: 100%; text-align: center; }
+        .modal-close { background: var(--accent-blue); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; margin-top: 16px; cursor: pointer; width: 100%; }
+
+        /* RACK TEXT NAMING BOX */
+        .name-input { background: #121212; border: 1px solid var(--border-color); color: white; padding: 6px; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 0.85rem; margin-bottom: 12px; }
+
+        /* SYSTEM TERMINAL LOGGER */
+        .event-log-container { display: flex; flex-direction: column; gap: 8px; max-height: 280px; overflow-y: auto; }
+        .event-row { background: #151515; border-left: 3px solid var(--accent-blue); padding: 10px; border-radius: 4px; font-family: monospace; }
+        .event-time { font-size: 0.7rem; color: var(--accent-green); margin-bottom: 2px; font-weight: bold; }
+        .event-desc { font-size: 0.78rem; color: #e0e0e0; line-height: 1.3; }
+
+        .footer-row { display: flex; gap: 10px; margin-top: 8px; width: 100%; }
+        button.action-btn { flex: 2; background-color: var(--accent-green); color: white; border: none; padding: 14px; border-radius: 8px; font-size: 0.9rem; font-weight: bold; cursor: pointer; }
+        #btn-refresh { flex: 1; background-color: #333333; border: 1px solid var(--border-color); color: white; padding: 14px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <!-- SECURITY PASSCODE WALL -->
+    <div id="auth-screen">
+        <h2 style="margin-bottom: 4px; font-size: 1.2rem;">System Interlock PIN</h2>
+        <div class="pin-display" id="pin-display"></div>
+        <div class="keypad">
+            <div class="key" onclick="appendPin('1')">1</div><div class="key" onclick="appendPin('2')">2</div><div class="key" onclick="appendPin('3')">3</div>
+            <div class="key" onclick="appendPin('4')">4</div><div class="key" onclick="appendPin('5')">5</div><div class="key" onclick="appendPin('6')">6</div>
+            <div class="key" onclick="appendPin('7')">7</div><div class="key" onclick="appendPin('8')">8</div><div class="key" onclick="appendPin('9')">9</div>
+            <div class="key" style="color: var(--status-off); font-size: 1.1rem;" onclick="clearPin()">CLR</div><div class="key" onclick="appendPin('0')">0</div>
+            <div class="key" style="color: var(--accent-green); font-size: 1.1rem;" onclick="verifyPin()">GO</div>
         </div>
-    `;
-    container.innerHTML = row + container.innerHTML;
-    while (container.children.length > 100) { container.removeChild(container.lastChild); }
-}
+    </div>
 
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js')
-        .then(() => console.log("Service Worker Active."))
-        .catch((err) => console.error("Worker failed:", err));
-}
+    <!-- MAIN CONTROL HUB INTERFACE CONTAINER -->
+    <div class="container" id="main-dashboard">
+        <h1>☀️ Solar Automation DCS</h1>
+        <div class="timestamp-header" id="execution-timestamp">DCS Link Offline</div>
+
+        <div class="tab-bar">
+            <button class="tab-btn active" onclick="switchTab('monitor-tab', this)">🎛️ Live Monitor</button>
+            <button class="tab-btn" onclick="switchTab('config-tab', this)">🔧 Device Config</button>
+            <button class="tab-btn" onclick="switchTab('priority-tab', this)">🚦 Priority Matrix</button>
+        </div>
+
+        <!-- TAB 1: LIVE MONITOR DASHBOARD -->
+        <div id="monitor-tab" class="tab-content active">
+            <div class="card">
+                <div class="card-title">Plant Telemetry Vectors</div>
+                <div class="metric-grid">
+                    <div class="metric-card"><div class="metric-label">Solar Generation</div><div id="pv-power" class="metric-value" style="color:#ffb74d;">-- W</div></div>
+                    <div class="metric-card"><div class="metric-label">Battery SOC</div><div id="battery-soc" class="metric-value" style="color:var(--accent-green);">--%</div></div>
+                    <div class="metric-card"><div class="metric-label">Grid Import</div><div id="grid-power" class="metric-value" style="color:var(--status-off);">-- W</div></div>
+                </div>
+                <div id="vector-status-tag" class="vector-tag vector-charging">SYNCING CONTROL LOGIC...</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">10-Channel Hardware Matrix Rack</div>
+                <div class="matrix-w">
+                    <table class="matrix-table">
+                        <thead>
+                            <tr>
+                                <th>Ch</th>
+                                <th>Assigned Asset Label</th>
+                                <th>State</th>
+                                <th>Setp</th>
+                                <th>Mode</th>
+                                <th>Seq</th>
+                            </tr>
+                        </thead>
+                        <tbody id="matrix-rack-body">
+                            <!-- Populated Dynamically by app.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Sequential Event History Logs</div>
+                <div class="event-log-container" id="event-log-terminal">
+                    <div style="color: var(--text-sub); text-align: center; font-family: monospace; font-size: 0.8rem; padding: 10px;">Initializing process log array buffer...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: DEVICE ASSET CONFIGURATION -->
+        <div id="config-tab" class="tab-content">
+            <div class="card">
+                <div class="card-title">Select Channel to Provision</div>
+                <div class="chip-grid">
+                    <div class="chip active" onclick="selectConfigChannel('AO1', this)">AO1</div>
+                    <div class="chip" onclick="selectConfigChannel('AO2', this)">AO2</div>
+                    <div class="chip" onclick="selectConfigChannel('AO3', this)">AO3</div>
+                    <div class="chip" onclick="selectConfigChannel('AO4', this)">AO4</div>
+                    <div class="chip" onclick="selectConfigChannel('AO5', this)">AO5</div>
+                </div>
+                <div class="chip-grid">
+                    <div class="chip" onclick="selectConfigChannel('DO1', this)">DO1</div>
+                    <div class="chip" onclick="selectConfigChannel('DO2', this)">DO2</div>
+                    <div class="chip" onclick="selectConfigChannel('DO3', this)">DO3</div>
+                    <div class="chip" onclick="selectConfigChannel('DO4', this)">DO4</div>
+                    <div class="chip" onclick="selectConfigChannel('DO5', this)">DO5</div>
+                </div>
+            </div>
+
+            <div class="card" id="channel-provision-card">
+                <div class="card-title"><span id="config-target-title">AO1 Hardware Settings</span></div>
+                
+                <label style="font-size:0.75rem; color:var(--text-sub); display:block; margin-bottom:4px;">Custom Asset Description Label</label>
+                <input type="text" id="cfg-custom-name" class="name-input" placeholder="Enter custom hardware description...">
+
+                <div class="switch-row">
+                    <div>
+                        <div style="font-size:0.85rem; font-weight:bold;">Manual Override (Hand Mode) <button class="info-btn" onclick="showHelp('hand')">i</button></div>
+                        <div style="font-size:0.7rem; color:var(--text-sub);">Bypasses automated solar calculations</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="cfg-override-toggle" onchange="toggleOverrideUI()"><span class="slider-sw"></span></label>
+                </div>
+
+                <!-- DYNAMIC PORTION FOR DO/AO MANUAL TARGETS -->
+                <div class="switch-row" id="cfg-do-manual-row" style="display:none;">
+                    <div>
+                        <div style="font-size:0.85rem; font-weight:bold;">Forced Hand State</div>
+                        <div style="font-size:0.7rem; color:var(--text-sub);">Set output hard ON or OFF</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="cfg-do-state-toggle"><span class="slider-sw"></span></label>
+                </div>
+
+                <!-- DYNAMIC PORTION FOR AO INDIVIDUAL LIMIT TUNING -->
+                <div id="cfg-ao-limits-block">
+                    <div style="font-size: 0.75rem; color: var(--text-sub); font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Analog Temperature Band Boundaries</div>
+                    
+                    <div class="step-container">
+                        <div class="step-label">Tier 4 Max Excess (SP_LOWLOW)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-lowlow', -1)">-</button><input type="number" id="cfg-sp-lowlow" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-lowlow', 1)">+</button></div>
+                    </div>
+                    <div class="step-container">
+                        <div class="step-label">Tier 3 Stable Excess (SP_LOW_MID)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-low-mid', -1)">-</button><input type="number" id="cfg-sp-low-mid" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-low-mid', 1)">+</button></div>
+                    </div>
+                    <div class="step-container">
+                        <div class="step-label">Tier 2 Light Excess (SP_HIGH_MID)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-high-mid', -1)">-</button><input type="number" id="cfg-sp-high-mid" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-high-mid', 1)">+</button></div>
+                    </div>
+                    <div class="step-container">
+                        <div class="step-label">Tier 1 Eco Boundary (SP_HIGH)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-sp-high', -1)">-</button><input type="number" id="cfg-sp-high" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-sp-high', 1)">+</button></div>
+                    </div>
+                </div>
+
+                <!-- DYNAMIC PORTION FOR DO SEQUENCER MAPPING -->
+                <div id="cfg-do-priority-block" style="display:none;">
+                    <div class="step-container">
+                        <div class="step-label">Sequence Priority Queue (1-5)</div>
+                        <div class="step-controls"><button class="btn-step" onclick="adjustStep('cfg-priority', -1, 1, 5)">-</button><input type="number" id="cfg-priority" class="step-input" readonly><button class="btn-step" onclick="adjustStep('cfg-priority', 1, 1, 5)">+</button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: MASTER PRIORITY AND MATRIX RATIOS -->
+        <div id="priority-tab" class="tab-content">
+            <!-- PERSONAL INVERTER API CREDENTIALS CARD -->
+            <div class="card">
+                <div class="card-title">Inverter Link Credentials <button class="info-btn" onclick="showHelp('inverter_creds')">i</button></div>
+                
+                <label style="font-size:0.7rem; color:var(--text-sub); display:block; margin-bottom:2px;">Inverter Serial Number (SN)</label>
+                <input type="text" id="net-inv-sn" class="name-input" placeholder="e.g., 230XXXXXXXX" style="font-family:monospace;">
+                
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div>
+                        <label style="font-size:0.65rem; color:var(--text-sub);">Developer App ID</label>
+                        <input type="text" id="net-app-id" class="name-input" placeholder="App ID Key" style="font-size:0.75rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem; color:var(--text-sub);">Developer App Secret</label>
+                        <input type="password" id="net-app-secret" class="name-input" placeholder="App Secret Key" style="font-size:0.75rem;">
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div>
+                        <label style="font-size:0.65rem; color:var(--text-sub);">Portal Username / Email</label>
+                        <input type="text" id="net-portal-user" class="name-input" placeholder="Login Email" style="font-size:0.75rem;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.65rem; color:var(--text-sub);">Portal Password</label>
+                        <input type="password" id="net-portal-pass" class="name-input" placeholder="Password" style="font-size:0.75rem;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Global Optimization Permissives</div>
+                
+                <!-- SIMULATED SOLAR OFFSET FIELD -->
+                <div class="step-container" style="border: 1px solid var(--accent-orange);">
+                    <div class="step-label" style="color: var(--accent-orange);">Simulated Solar Offset <button class="info-btn" onclick="showHelp('offset')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" style="border-color:var(--accent-orange);" onclick="adjustStep('mat-solar-offset', -100, -5000, 5000)">-</button><input type="number" id="mat-solar-offset" class="step-input" value="0" readonly><button class="btn-step" style="border-color:var(--accent-orange);" onclick="adjustStep('mat-solar-offset', 100, -5000, 5000)">+</button></div>
+                </div>
+
+                <div class="step-container">
+                    <div class="step-label">Auto Activation Min SOC <button class="info-btn" onclick="showHelp('soc')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-min-soc', -5, 20, 95)">-</button><input type="number" id="mat-min-soc" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-min-soc', 5, 20, 95)">+</button></div>
+                </div>
+
+                <div class="step-container">
+                    <div class="step-label">True Discharge Threshold <button class="info-btn" onclick="showHelp('discharge')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-discharge-th', -25, 50, 1000)">-</button><input type="number" id="mat-discharge-th" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-discharge-th', 25, 50, 1000)">+</button></div>
+                </div>
+
+                <div class="step-container">
+                    <div class="step-label">Hysteresis Power Deadband <button class="info-btn" onclick="showHelp('deadband')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-deadband', -25, 50, 500)">-</button><input type="number" id="mat-deadband" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-deadband', 25, 50, 500)">+</button></div>
+                </div>
+
+                <div class="step-container">
+                    <div class="step-label">Cascading Stage Delay <button class="info-btn" onclick="showHelp('delay')">i</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-delay', -1, 1, 20)">-</button><input type="number" id="mat-delay" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-delay', 1, 1, 20)">+</button></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Daytime Window Operations <button class="info-btn" onclick="showHelp('time')">i</button></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                    <div>
+                        <label style="font-size:0.7rem; color:var(--text-sub);">Start Optimization</label>
+                        <input type="time" id="mat-time-start" style="width:100%; height:36px; background:#181818; border:1px solid var(--border-color); color:white; padding:4px; border-radius:6px; font-size:0.9rem; box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem; color:var(--text-sub);">Force Night Standby</label>
+                        <input type="time" id="mat-time-end" style="width:100%; height:36px; background:#181818; border:1px solid var(--border-color); color:white; padding:4px; border-radius:6px; font-size:0.9rem; box-sizing:border-box;">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">DCS Sequence Execution Queue Maps</div>
+                <div style="font-family:monospace; font-size:0.8rem; display:flex; flex-direction:column; gap:6px;" id="queue-mapping-list">
+                    <!-- Loaded Dynamically via script arrays -->
+                </div>
+            </div>
+        </div>
+
+        <!-- GLOBAL CONTROL PERSISTENCE STRIP -->
+        <div class="footer-row">
+            <button id="btn-refresh" type="button" onclick="executeMasterSync()">🔄 Sync</button>
+            <button class="action-btn" id="btn-save" type="button" onclick="commitMatrixConfig()">💾 Save Config Matrix</button>
+        </div>
+    </div>
+
+    <!-- CONTEXT HELP DIALOG MODAL -->
+    <div class="modal" id="help-modal">
+        <div class="modal-content">
+            <h3 id="help-title" style="margin-top:0; font-size:1.1rem; color:var(--accent-blue);">Help</h3>
+            <p id="help-text" style="font-size:0.85rem; line-height:1.4; color:#e0e0e0; text-align:justify; margin-bottom:0;"></p>
+            <button class="modal-close" onclick="closeHelp()">Dismiss Interlock Dialog</button>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
