@@ -61,7 +61,7 @@
         .card { background-color: var(--card-bg); border-radius: 12px; padding: 12px; margin-bottom: 10px; border: 1px solid var(--border-color); position: relative; box-sizing: border-box; }
         .card-title { font-size: 0.78rem; color: var(--text-sub); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; border-bottom: 1px solid #2a2a2a; padding-bottom: 6px; }
         
-        /* DYNAMIC 4-NODE UNIFORM HEADER GRID */
+        /* 4-NODE UNIFORM HEADER GRID */
         .telemetry-header-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -154,28 +154,20 @@
             <div class="card" style="padding:12px;">
                 <div class="card-title" style="margin-bottom:10px;">Plant Telemetry Vectors</div>
                 
-                <!-- UNIFORM 4-VALUE HEADER GRID MATRICES -->
                 <div class="telemetry-header-grid">
-                    <!-- Value 1: Solar Generation -->
                     <div class="metric-block" style="border-color: var(--accent-orange);">
                         <span class="metric-lbl">Solar Generation</span>
                         <span id="lbl-pv" class="metric-val" style="color: var(--accent-orange);">0.00 kW</span>
                     </div>
-                    
-                    <!-- Value 2: Grid Import -->
                     <div class="metric-block" style="border-color: var(--accent-blue);">
                         <span class="metric-lbl">Grid Import</span>
                         <span id="lbl-grid" class="metric-val" style="color: var(--accent-blue);">0 W</span>
                     </div>
-
-                    <!-- Value 3: Battery Status -->
                     <div class="metric-block" style="border-color: var(--accent-green);">
                         <span class="metric-lbl">Battery Status</span>
                         <span id="lbl-soc" class="metric-val" style="color: var(--accent-green);">100% SOC</span>
                         <span id="lbl-bat" style="font-size: 0.68rem; color: var(--text-sub); margin-top: 1px;">0.00 kW</span>
                     </div>
-                    
-                    <!-- Value 4: Household Load -->
                     <div class="metric-block" style="border-color: #e91e63;">
                         <span class="metric-lbl">Household Load</span>
                         <span id="lbl-load" class="metric-val" style="color: #e91e63;">0 W</span>
@@ -260,7 +252,7 @@
             </div>
         </div>
 
-        <!-- TAB 3: MASTER CONFIG MATRIX -->
+        <!-- TAB 3: MATRIX SETTINGS -->
         <div id="priority-tab" class="tab-content">
             <div class="card">
                 <div class="card-title">Inverter Link Credentials</div>
@@ -279,18 +271,47 @@
 
             <div class="card">
                 <div class="card-title">Global Optimizations</div>
+                
+                <!-- Simulated Solar Offset -->
                 <div class="step-container" style="border: 1px solid var(--accent-orange);">
-                    <div class="step-label" style="color: var(--accent-orange);">Simulated Solar Offset</div>
+                    <div class="step-label" style="color: var(--accent-orange);">Simulated Solar Offset (W)</div>
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-solar-offset', -100, -5000, 5000)">-</button><input type="number" id="mat-solar-offset" class="step-input" value="0" readonly><button class="btn-step" onclick="adjustStep('mat-solar-offset', 100, -5000, 5000)">+</button></div>
                 </div>
-                <div class="step-container">
-                    <div class="step-label">Auto Activation Min SOC</div>
-                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-min-soc', -5, 20, 95)">-</button><input type="number" id="mat-min-soc" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-min-soc', 5, 20, 95)">+</button></div>
+
+                <!-- Min Battery Charge Rate Target Threshold -->
+                <div class="step-container" style="border: 1px solid var(--accent-green);">
+                    <div class="step-label" style="color: var(--accent-green); font-size: 0.7rem; font-weight: bold;">Min Battery Charge Rate Trigger (W)</div>
+                    <div class="step-controls"><button class="btn-step" style="border-color:var(--accent-green);" onclick="adjustStep('mat-min-charge-th', -100, 100, 5000)">-</button><input type="number" id="mat-min-charge-th" class="step-input" value="1000" readonly><button class="btn-step" style="border-color:var(--accent-green);" onclick="adjustStep('mat-min-charge-th', 100, 100, 5000)">+</button></div>
                 </div>
+
                 <div class="step-container">
-                    <div class="step-label">Hysteresis Power Deadband</div>
+                    <div class="step-label">Auto Activation Min SOC (%)</div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-min-soc', -5, 20, 100)">-</button><input type="number" id="mat-min-soc" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-min-soc', 5, 20, 100)">+</button></div>
+                </div>
+                
+                <div class="step-container">
+                    <div class="step-label">Hysteresis Power Deadband (W)</div>
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-deadband', -25, 50, 500)">-</button><input type="number" id="mat-deadband" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-deadband', 25, 50, 500)">+</button></div>
                 </div>
+
+                <!-- Dynamic Solar Tier 1 Boundary Trigger -->
+                <div class="step-container">
+                    <div class="step-label">Tier 1 Low Sun Boundary (W)</div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-low', -100, 500, 2000)">-</button><input type="number" id="mat-tier-low" class="step-input" value="1200" readonly><button class="btn-step" onclick="adjustStep('mat-tier-low', 100, 500, 2000)">+</button></div>
+                </div>
+
+                <!-- Dynamic Solar Tier 2 Mid Boundary Trigger -->
+                <div class="step-container">
+                    <div class="step-label">Tier 2 Mid Sun Boundary (W)</div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-mid', -100, 1500, 3500)">-</button><input type="number" id="mat-tier-mid" class="step-input" value="2500" readonly><button class="btn-step" onclick="adjustStep('mat-tier-mid', 100, 1500, 3500)">+</button></div>
+                </div>
+
+                <!-- Dynamic Solar Tier 4 Max Boundary Trigger -->
+                <div class="step-container">
+                    <div class="step-label">Tier 4 Max Overprod. Boundary (W)</div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-max', -100, 3000, 6000)">-</button><input type="number" id="mat-tier-max" class="step-input" value="4000" readonly><button class="btn-step" onclick="adjustStep('mat-tier-max', 100, 3000, 6000)">+</button></div>
+                </div>
+
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                     <div><label style="font-size:0.65rem; color:var(--text-sub);">Start Optimization Time</label><input type="time" id="mat-time-start" style="width:100%; height:32px; background:#161616; border:1px solid var(--border-color); color:white; border-radius:4px;"></div>
                     <div><label style="font-size:0.65rem; color:var(--text-sub);">Night Standby Time</label><input type="time" id="mat-time-end" style="width:100%; height:32px; background:#161616; border:1px solid var(--border-color); color:white; border-radius:4px;"></div>
