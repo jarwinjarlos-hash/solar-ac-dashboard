@@ -1,5 +1,5 @@
 // =================================================================
-// ☀️ CLEAN DEYE DCS AUTOMATION ENGINE (app.js) - RELEASE STAGE BETA 6.4
+// ☀️ CLEAN DEYE DCS AUTOMATION ENGINE (app.js) - RELEASE STAGE BETA 6.5
 // =================================================================
 
 let currentChannel = 'AO1';
@@ -152,8 +152,13 @@ async function syncTelemetryFromBackend() {
     const pass = document.getElementById("net-portal-pass").value;
 
     try {
+        // 🛠️ FIX: Correctly include inverter_sn so the Python backend receives it!
         const payload = (appId && appSecret && email && pass) ? {
-            email: email, password: pass, app_id: appId, app_secret: appSecret, inverter_sn: invSn
+            email: email, 
+            password: pass, 
+            app_id: appId, 
+            app_secret: appSecret, 
+            inverter_sn: invSn || ""
         } : {};
 
         const response = await fetch(`${RENDER_BACKEND_URL}/sync?_cb=${Date.now()}`, {
@@ -168,12 +173,17 @@ async function syncTelemetryFromBackend() {
         if (data.status === "success") {
             const measurements = data.measurements || data.telemetry || {};
             
+            // Exact casing matches with Python backend:
             liveTelemetry.basePv = floatSafe(measurements.PV_Generation_W ?? measurements.PV_Power_W ?? 0);
             liveTelemetry.batterySoc = intSafe(measurements.Battery_SOC ?? 100);
-            liveTelemetry.calculatedLoad = floatSafe(measurements.usePower ?? measurements.House_Load_W ?? 652);
-            liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W ?? measurements.Grid_Import_W ?? 0);
             
-            // Collect the backend's native or calculated battery flow
+            // Map the exact "usePower" variable sent from python
+            liveTelemetry.calculatedLoad = floatSafe(measurements.usePower ?? 0);
+            
+            // Map the exact "Grid_Power_W" variable sent from python
+            liveTelemetry.gridPower = floatSafe(measurements.Grid_Power_W ?? 0);
+            
+            // Map the exact "Battery_Power_W" variable sent from python
             liveTelemetry.backendBatteryPower = floatSafe(measurements.Battery_Power_W ?? 0);
 
             recalculateAppliedOffsetTelemetry();
@@ -193,7 +203,6 @@ function recalculateAppliedOffsetTelemetry() {
     liveTelemetry.calculatedPv = Math.max(0, liveTelemetry.basePv + offset);
     
     // Calculate precise battery power flow (Sign convention: positive is discharging, negative is charging)
-    // Formula: BatteryFlow = Load + Grid - Solar
     if (offset === 0 && liveTelemetry.backendBatteryPower !== 0) {
         liveTelemetry.batteryPower = liveTelemetry.backendBatteryPower;
     } else {
@@ -215,7 +224,7 @@ function executeMasterSync() {
     document.getElementById("lbl-grid").innerText = `${liveTelemetry.gridPower} W`;
     document.getElementById("lbl-load").innerText = `${liveTelemetry.calculatedLoad} W`;
     
-    // 🛠️ Signs are preserved (+ for discharge, - for charge)
+    // Signs are preserved (+ for discharge, - for charge)
     let batValue = liveTelemetry.batteryPower / 1000;
     document.getElementById("lbl-bat").innerText = `${batValue.toFixed(2)} kW`;
     
