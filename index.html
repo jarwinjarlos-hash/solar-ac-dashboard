@@ -123,6 +123,11 @@
         .event-row { background: #141414; border-left: 3px solid var(--accent-blue); padding: 8px; border-radius: 4px; font-family: monospace; }
         .event-time { font-size: 0.65rem; color: var(--accent-green); }
         .event-desc { font-size: 0.72rem; color: #dddddd; margin-top: 2px; }
+
+        .footer-row { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 4px; width: 100%; }
+        .footer-row button { height: 42px; font-weight: bold; font-size: 0.85rem; border-radius: 8px; cursor: pointer; border: 1px solid var(--border-color); }
+        #btn-refresh { background: #252525; color: white; }
+        #btn-save { background: var(--accent-blue); color: white; border-color: var(--accent-blue); }
     </style>
 </head>
 <body>
@@ -294,22 +299,28 @@
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-deadband', -25, 50, 500)">-</button><input type="number" id="mat-deadband" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-deadband', 25, 50, 500)">+</button></div>
                 </div>
 
-                <!-- Dynamic Solar Tier 1 Boundary Trigger -->
+                <!-- Tier 1 Low Sun Boundary Trigger (Direct Manual Keyboard Entry Enabled) -->
                 <div class="step-container">
                     <div class="step-label">Tier 1 Low Sun Boundary (W)</div>
-                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-low', -100, 500, 2000)">-</button><input type="number" id="mat-tier-low" class="step-input" value="1200" readonly><button class="btn-step" onclick="adjustStep('mat-tier-low', 100, 500, 2000)">+</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-low', -100)">-</button><input type="number" id="mat-tier-low" class="step-input" value="1200" min="0" max="6000"><button class="btn-step" onclick="adjustStep('mat-tier-low', 100)">+</button></div>
                 </div>
 
-                <!-- Dynamic Solar Tier 2 Mid Boundary Trigger -->
+                <!-- Tier 2 Mid Sun Boundary Trigger -->
                 <div class="step-container">
                     <div class="step-label">Tier 2 Mid Sun Boundary (W)</div>
-                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-mid', -100, 1500, 3500)">-</button><input type="number" id="mat-tier-mid" class="step-input" value="2500" readonly><button class="btn-step" onclick="adjustStep('mat-tier-mid', 100, 1500, 3500)">+</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-mid', -100)">-</button><input type="number" id="mat-tier-mid" class="step-input" value="2500" readonly><button class="btn-step" onclick="adjustStep('mat-tier-mid', 100)">+</button></div>
                 </div>
 
-                <!-- Dynamic Solar Tier 4 Max Boundary Trigger -->
+                <!-- Tier 3 Mid-High Sun Boundary Trigger -->
+                <div class="step-container">
+                    <div class="step-label">Tier 3 Mid-High Sun Boundary (W)</div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-high', -100)">-</button><input type="number" id="mat-tier-high" class="step-input" value="3300" readonly><button class="btn-step" onclick="adjustStep('mat-tier-high', 100)">+</button></div>
+                </div>
+
+                <!-- Tier 4 Max Boundary Trigger -->
                 <div class="step-container">
                     <div class="step-label">Tier 4 Max Overprod. Boundary (W)</div>
-                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-max', -100, 3000, 6000)">-</button><input type="number" id="mat-tier-max" class="step-input" value="4000" readonly><button class="btn-step" onclick="adjustStep('mat-tier-max', 100, 3000, 6000)">+</button></div>
+                    <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-max', -100)">-</button><input type="number" id="mat-tier-max" class="step-input" value="4000" readonly><button class="btn-step" onclick="adjustStep('mat-tier-max', 100)">+</button></div>
                 </div>
 
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
@@ -321,7 +332,7 @@
 
         <div class="footer-row">
             <button id="btn-refresh" type="button" onclick="syncTelemetryFromBackend()">🔄 Sync</button>
-            <button class="action-btn" id="btn-save" type="button" onclick="commitMatrixConfig()">💾 Save Config Matrix</button>
+            <button id="btn-save" type="button" onclick="commitMatrixConfig()">💾 Save Config Matrix</button>
         </div>
     </div>
 
