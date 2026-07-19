@@ -154,7 +154,7 @@ function adjustStep(id, delta, min = -5000, max = 10000) {
     // Intercept Tier adjust calls redirecting them into safe cascading validation loops
     if (id === "mat-tier-low") { handleTier1ManualInput((parseInt(document.getElementById(id).value) || 0) + delta); return; }
     if (id === "mat-tier-mid") { adjustTier2(delta > 0 ? 'plus' : 'minus'); return; }
-    if (id === "mat-tier-high") { adjustTier3(delta > 0 ? 'plus' : 'minus'); return; }
+    if (id === "mat-tier-high") { adjustStep3(delta > 0 ? 'plus' : 'minus'); return; }
     if (id === "mat-tier-max") { adjustTier4(delta > 0 ? 'plus' : 'minus'); return; }
 
     let input = document.getElementById(id);
@@ -233,7 +233,7 @@ async function syncTelemetryFromBackend() {
     const email = document.getElementById("net-portal-user").value;
     const pass = document.getElementById("net-portal-pass").value;
 
-    // 🌀 Activate full screen blurred layout overlay
+    // 🌀 Activate full screen blurred layout overlay panel panel
     const overlay = document.getElementById('loading-overlay');
     if (overlay) overlay.classList.add('active');
 
@@ -341,7 +341,7 @@ function renderChannelConfigPage() {
     document.getElementById("cfg-override-toggle").checked = isOverride;
 
     if (isAO) {
-        if(!configMatrix.aoLimits[currentChannel]) configMatrix.aoLimits[currentChannel] = {lowlow: 21, height: 27};
+        if(!configMatrix.aoLimits[currentChannel]) configMatrix.aoLimits[currentChannel] = {lowlow: 21, high: 27};
         document.getElementById("cfg-sp-lowlow").value = configMatrix.aoLimits[currentChannel].lowlow;
         document.getElementById("cfg-sp-high").value = configMatrix.aoLimits[currentChannel].high;
     } else {
