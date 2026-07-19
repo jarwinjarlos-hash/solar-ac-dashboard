@@ -233,6 +233,13 @@ async function syncTelemetryFromBackend() {
     const email = document.getElementById("net-portal-user").value;
     const pass = document.getElementById("net-portal-pass").value;
 
+    // Trigger visual loading animation bar top edge without clearing existing numbers
+    const loadingBar = document.getElementById('loading-bar');
+    if (loadingBar) {
+        loadingBar.classList.remove('finish');
+        loadingBar.classList.add('active');
+    }
+
     try {
         const payload = (appId && appSecret && email && pass) ? {
             email: email, 
@@ -252,6 +259,17 @@ async function syncTelemetryFromBackend() {
         const data = await response.json();
 
         if (data.status === "success") {
+            // Complete top line loading animation smoothly
+            if (loadingBar) {
+                loadingBar.classList.remove('active');
+                loadingBar.classList.add('finish');
+                setTimeout(() => { loadingBar.style.opacity = '0'; }, 300);
+                setTimeout(() => { 
+                    loadingBar.classList.remove('finish'); 
+                    loadingBar.style.width = '0%'; 
+                }, 500);
+            }
+
             const measurements = data.measurements || {};
             
             liveTelemetry.basePv = parseFloat(measurements.PV_Generation_W || 0);
@@ -262,7 +280,7 @@ async function syncTelemetryFromBackend() {
 
             currentOutputStates = data.output_states || {};
             
-            // CONVERTED FROM kW TO W
+            // CONVERTED FROM kW TO W - Silent update execution point
             document.getElementById("lbl-pv").innerText = `${liveTelemetry.basePv.toFixed(0)} W`;
             document.getElementById("lbl-soc").innerText = `${liveTelemetry.batterySoc}% SOC`;
             document.getElementById("lbl-grid").innerText = `${liveTelemetry.gridPower} W`;
@@ -284,6 +302,11 @@ async function syncTelemetryFromBackend() {
         }
     } catch (e) {
         console.error(e);
+        // Safely reset indicator bar layout on exceptions
+        if (loadingBar) {
+            loadingBar.classList.remove('active', 'finish');
+            loadingBar.style.width = '0%';
+        }
         document.getElementById("execution-timestamp").innerText = "LINK TIMEOUT: Syncing...";
     }
 }
