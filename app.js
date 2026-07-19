@@ -37,6 +37,10 @@ window.onload = function() {
         document.getElementById("auth-screen").style.display = "none";
         document.getElementById("main-dashboard").style.display = "block";
         initApp();
+    } else {
+        // Cold boot (unauthenticated): Hide overlay from view so user can access PIN wall cleanly
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'none';
     }
 };
 
@@ -52,6 +56,11 @@ function verifyPin() {
         sessionStorage.setItem("panel_authenticated", "true");
         document.getElementById("auth-screen").style.display = "none";
         document.getElementById("main-dashboard").style.display = "block";
+        
+        // Authenticated: Bring loading screen back to process initial initialization
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'flex';
+        
         initApp();
     } else {
         alert("Interlock Denied");
@@ -154,7 +163,7 @@ function adjustStep(id, delta, min = -5000, max = 10000) {
     // Intercept Tier adjust calls redirecting them into safe cascading validation loops
     if (id === "mat-tier-low") { handleTier1ManualInput((parseInt(document.getElementById(id).value) || 0) + delta); return; }
     if (id === "mat-tier-mid") { adjustTier2(delta > 0 ? 'plus' : 'minus'); return; }
-    if (id === "mat-tier-high") { adjustStep3(delta > 0 ? 'plus' : 'minus'); return; }
+    if (id === "mat-tier-high") { adjustTier3(delta > 0 ? 'plus' : 'minus'); return; }
     if (id === "mat-tier-max") { adjustTier4(delta > 0 ? 'plus' : 'minus'); return; }
 
     let input = document.getElementById(id);
@@ -206,8 +215,9 @@ async function initApp() {
         tier1Box.oninput = function() { handleTier1ManualInput(this.value); };
     }
 
-    syncTelemetryFromBackend();
-    setInterval(() => { syncTelemetryFromBackend(); }, 30000);
+    // Initial manual load trigger to resolve telemetry before removing glass blur
+    syncTelemetryFromBackend(false);
+    setInterval(() => { syncTelemetryFromBackend(true); }, 30000);
 }
 
 function loadGlobalPriorityInputs() {
@@ -226,16 +236,18 @@ function loadGlobalPriorityInputs() {
     document.getElementById("mat-tier-max").value = configMatrix.global.tierMax || 4000;
 }
 
-async function syncTelemetryFromBackend() {
+async function syncTelemetryFromBackend(isAuto = false) {
     const invSn = document.getElementById("net-inv-sn").value;
     const appId = document.getElementById("net-app-id").value;
     const appSecret = document.getElementById("net-app-secret").value;
     const email = document.getElementById("net-portal-user").value;
     const pass = document.getElementById("net-portal-pass").value;
 
-    // 🌀 Activate full screen blurred layout overlay panel panel
+    // 🌀 Only lock panel controls and show full screen blur if triggered manually/via refresh
     const overlay = document.getElementById('loading-overlay');
-    if (overlay) overlay.classList.add('active');
+    if (overlay && !isAuto) {
+        overlay.style.display = 'flex';
+    }
 
     try {
         const payload = (appId && appSecret && email && pass) ? {
@@ -290,8 +302,8 @@ async function syncTelemetryFromBackend() {
         console.error(e);
         document.getElementById("execution-timestamp").innerText = "LINK TIMEOUT: Syncing...";
     } finally {
-        // 🌀 Unblur and remove layout interaction shields smoothly once complete
-        if (overlay) overlay.classList.remove('active');
+        // 🌀 Clear overlay entirely once operation finishes
+        if (overlay) overlay.style.display = 'none';
     }
 }
 
@@ -317,7 +329,7 @@ function renderMatrixRackTable() {
         
         let stateBadge = isAO ? "—" : (rawState ? `<span class="badge badge-on">ON</span>` : `<span class="badge badge-off">OFF</span>`);
         let setpDisplay = isAO ? `${rawState}°C` : "—";
-        let modeBadge = isOverride ? `<span class="badge badge-hand">HAND</span>` : `<span class="badge badge-auto">AUTO</span>`;
+        let modeBadge = isOverride ? `<span class="badge badge-hand">HAND</span>` : `<span class="badge badge-auto">AUTO</span>`);
         let seqDisplay = isAO ? "—" : `P${configMatrix.priorities[ch] || 1}`;
 
         tbody.innerHTML += `<tr><td>${ch}</td><td>${name}</td><td>${stateBadge}</td><td><b>${setpDisplay}</b></td><td>${modeBadge}</td><td>${seqDisplay}</td></tr>`;
@@ -399,5 +411,5 @@ async function commitMatrixConfig() {
         alert("Warning: Local settings saved, but could not sync with Backend.");
     }
 
-    syncTelemetryFromBackend();
+    syncTelemetryFromBackend(false);
 }
