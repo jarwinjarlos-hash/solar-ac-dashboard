@@ -38,20 +38,17 @@
             background: rgba(10, 14, 22, 0.85);
             backdrop-filter: blur(8px);
             -webkit-backdrop-filter: blur(8px);
-            display: none; /* Changed from opacity to hard display check to guarantee interlock */
+            display: flex; /* Visible immediately by default to hide 0W elements during refresh */
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 100000;
-        }
-        .loading-overlay.active {
-            display: flex;
+            z-index: 9998; /* Placed safely under Auth Screen (9999) to keep PIN wall unobstructed */
         }
         .spinner {
             width: 56px;
             height: 56px;
             border: 4px solid rgba(255, 255, 255, 0.05);
-            border-top: 4px solid #00b0ff; /* Light high-vis blue-green spectrum loop */
+            border-top: 4px solid #00b0ff; 
             border-right: 4px solid var(--accent-green);
             border-radius: 50%;
             animation: spin 0.75s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -172,7 +169,7 @@
 </head>
 <body>
 
-    <!-- 🌀 Full Screen Glass Blur Loading Portal Panel -->
+    <!-- 🌀 Full Screen Glass Blur Loading Panel -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="spinner"></div>
         <div class="loading-text">Loading telemetry cache sync...</div>
@@ -377,7 +374,7 @@
         </div>
 
         <div class="footer-row">
-            <button id="btn-refresh" type="button" onclick="syncTelemetryFromBackend()">🔄 Sync</button>
+            <button id="btn-refresh" type="button" onclick="syncTelemetryFromBackend(false)">🔄 Sync</button>
             <button id="btn-save" type="button" onclick="commitMatrixConfig()">💾 Save Config Matrix</button>
         </div>
     </div>
