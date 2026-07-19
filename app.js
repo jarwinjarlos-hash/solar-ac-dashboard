@@ -233,12 +233,9 @@ async function syncTelemetryFromBackend() {
     const email = document.getElementById("net-portal-user").value;
     const pass = document.getElementById("net-portal-pass").value;
 
-    // Trigger visual loading animation bar top edge without clearing existing numbers
-    const loadingBar = document.getElementById('loading-bar');
-    if (loadingBar) {
-        loadingBar.classList.remove('finish');
-        loadingBar.classList.add('active');
-    }
+    // 🌀 Activate full screen blurred layout overlay
+    const overlay = document.getElementById('loading-overlay');
+    if (overlay) overlay.classList.add('active');
 
     try {
         const payload = (appId && appSecret && email && pass) ? {
@@ -259,17 +256,6 @@ async function syncTelemetryFromBackend() {
         const data = await response.json();
 
         if (data.status === "success") {
-            // Complete top line loading animation smoothly
-            if (loadingBar) {
-                loadingBar.classList.remove('active');
-                loadingBar.classList.add('finish');
-                setTimeout(() => { loadingBar.style.opacity = '0'; }, 300);
-                setTimeout(() => { 
-                    loadingBar.classList.remove('finish'); 
-                    loadingBar.style.width = '0%'; 
-                }, 500);
-            }
-
             const measurements = data.measurements || {};
             
             liveTelemetry.basePv = parseFloat(measurements.PV_Generation_W || 0);
@@ -302,12 +288,10 @@ async function syncTelemetryFromBackend() {
         }
     } catch (e) {
         console.error(e);
-        // Safely reset indicator bar layout on exceptions
-        if (loadingBar) {
-            loadingBar.classList.remove('active', 'finish');
-            loadingBar.style.width = '0%';
-        }
         document.getElementById("execution-timestamp").innerText = "LINK TIMEOUT: Syncing...";
+    } finally {
+        // 🌀 Unblur and remove layout interaction shields smoothly once complete
+        if (overlay) overlay.classList.remove('active');
     }
 }
 
@@ -357,7 +341,7 @@ function renderChannelConfigPage() {
     document.getElementById("cfg-override-toggle").checked = isOverride;
 
     if (isAO) {
-        if(!configMatrix.aoLimits[currentChannel]) configMatrix.aoLimits[currentChannel] = {lowlow: 21, high: 27};
+        if(!configMatrix.aoLimits[currentChannel]) configMatrix.aoLimits[currentChannel] = {lowlow: 21, height: 27};
         document.getElementById("cfg-sp-lowlow").value = configMatrix.aoLimits[currentChannel].lowlow;
         document.getElementById("cfg-sp-high").value = configMatrix.aoLimits[currentChannel].high;
     } else {
