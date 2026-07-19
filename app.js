@@ -189,7 +189,7 @@ async function initApp() {
         }
     }
     
-    loadGlobalPriorityInputs()
+    loadGlobalPriorityInputs();
     renderMatrixRackTable();
     renderChannelConfigPage();
     
@@ -262,7 +262,7 @@ async function syncTelemetryFromBackend() {
 
             currentOutputStates = data.output_states || {};
             
-            // UPDATED: Directly display raw Watts for Solar Generation to match Grid and Load
+            // CONVERTED FROM kW TO W
             document.getElementById("lbl-pv").innerText = `${liveTelemetry.basePv.toFixed(0)} W`;
             document.getElementById("lbl-soc").innerText = `${liveTelemetry.batterySoc}% SOC`;
             document.getElementById("lbl-grid").innerText = `${liveTelemetry.gridPower} W`;
