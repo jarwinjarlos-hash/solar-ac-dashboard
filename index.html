@@ -28,28 +28,47 @@
             -webkit-user-select: none; user-select: none;
         }
 
-        /* Top Edge Silent Loading Animation Bar */
-        .loading-bar {
+        /* 🌀 FULL SCREEN BLURRED OVERLAY & ROTATING SPINNER */
+        .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
-            width: 0%;
-            height: 4px;
-            background: #4caf50; /* Matches your --accent-green theme */
-            z-index: 10000;
-            transition: width 0.3s ease;
+            width: 100%;
+            height: 100%;
+            background: rgba(18, 18, 18, 0.7);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10005;
             opacity: 0;
             pointer-events: none;
+            transition: opacity 0.25s ease;
         }
-        .loading-bar.active {
+        .loading-overlay.active {
             opacity: 1;
-            width: 75%; /* Instant immediate soft fill while background loop polls Render */
-            transition: width 2.5s cubic-bezier(0.1, 0.8, 0.1, 1);
+            pointer-events: auto;
         }
-        .loading-bar.finish {
-            opacity: 1;
-            width: 100%;
-            transition: width 0.2s ease;
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top: 4px solid var(--accent-green);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        .loading-text {
+            margin-top: 14px;
+            font-size: 0.82rem;
+            color: var(--text-main);
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
         .container { width: 100%; max-width: 480px; }
@@ -156,8 +175,11 @@
 </head>
 <body>
 
-    <!-- Target injection node for silent loading bar indicator -->
-    <div id="loading-bar" class="loading-bar"></div>
+    <!-- 🌀 Blurred Background UI Overlay Layout Portal Element -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="spinner"></div>
+        <div class="loading-text">Syncing Telemetry Core...</div>
+    </div>
 
     <div id="auth-screen">
         <h2 style="margin-bottom: 4px; font-size: 1.1rem;">System Interlock PIN</h2>
@@ -326,7 +348,7 @@
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-deadband', -25, 50, 500)">-</button><input type="number" id="mat-deadband" class="step-input" readonly><button class="btn-step" onclick="adjustStep('mat-deadband', 25, 50, 500)">+</button></div>
                 </div>
 
-                <!-- Tier 1 Low Sun Boundary Trigger (Direct Manual Keyboard Entry Enabled) -->
+                <!-- Tier 1 Low Sun Boundary Trigger -->
                 <div class="step-container">
                     <div class="step-label">Tier 1 Low Sun Boundary (W)</div>
                     <div class="step-controls"><button class="btn-step" onclick="adjustStep('mat-tier-low', -100)">-</button><input type="number" id="mat-tier-low" class="step-input" value="1200" min="0" max="6000"><button class="btn-step" onclick="adjustStep('mat-tier-low', 100)">+</button></div>
