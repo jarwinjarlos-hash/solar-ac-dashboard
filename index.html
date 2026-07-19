@@ -28,6 +28,30 @@
             -webkit-user-select: none; user-select: none;
         }
 
+        /* Top Edge Silent Loading Animation Bar */
+        .loading-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 4px;
+            background: #4caf50; /* Matches your --accent-green theme */
+            z-index: 10000;
+            transition: width 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .loading-bar.active {
+            opacity: 1;
+            width: 75%; /* Instant immediate soft fill while background loop polls Render */
+            transition: width 2.5s cubic-bezier(0.1, 0.8, 0.1, 1);
+        }
+        .loading-bar.finish {
+            opacity: 1;
+            width: 100%;
+            transition: width 0.2s ease;
+        }
+
         .container { width: 100%; max-width: 480px; }
 
         /* SECURITY PIN WALL */
@@ -132,6 +156,9 @@
 </head>
 <body>
 
+    <!-- Target injection node for silent loading bar indicator -->
+    <div id="loading-bar" class="loading-bar"></div>
+
     <div id="auth-screen">
         <h2 style="margin-bottom: 4px; font-size: 1.1rem;">System Interlock PIN</h2>
         <div class="pin-display" id="pin-display"></div>
@@ -162,7 +189,6 @@
                 <div class="telemetry-header-grid">
                     <div class="metric-block" style="border-color: var(--accent-orange);">
                         <span class="metric-lbl">Solar Generation</span>
-                        <!-- CONVERTED FALLBACK VIEWPORT TO 0 W -->
                         <span id="lbl-pv" class="metric-val" style="color: var(--accent-orange);">0 W</span>
                     </div>
                     <div class="metric-block" style="border-color: var(--accent-blue);">
