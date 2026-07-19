@@ -329,7 +329,7 @@ function renderMatrixRackTable() {
         
         let stateBadge = isAO ? "—" : (rawState ? `<span class="badge badge-on">ON</span>` : `<span class="badge badge-off">OFF</span>`);
         let setpDisplay = isAO ? `${rawState}°C` : "—";
-        let modeBadge = isOverride ? `<span class="badge badge-hand">HAND</span>` : `<span class="badge badge-auto">AUTO</span>`);
+        let modeBadge = isOverride ? `<span class="badge badge-hand">HAND</span>` : `<span class="badge badge-auto">AUTO</span>`;
         let seqDisplay = isAO ? "—" : `P${configMatrix.priorities[ch] || 1}`;
 
         tbody.innerHTML += `<tr><td>${ch}</td><td>${name}</td><td>${stateBadge}</td><td><b>${setpDisplay}</b></td><td>${modeBadge}</td><td>${seqDisplay}</td></tr>`;
