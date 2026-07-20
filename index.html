@@ -43,6 +43,10 @@
             justify-content: center;
             align-items: center;
             z-index: 9998; /* Placed safely under Auth Screen (9999) to keep PIN wall unobstructed */
+            
+            /* ⚡ INSTANT DISMISSAL OPTIMIZATIONS */
+            transition: none !important;
+            will-change: opacity, display;
         }
         .spinner {
             width: 56px;
