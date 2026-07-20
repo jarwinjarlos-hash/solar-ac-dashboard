@@ -302,8 +302,12 @@ async function syncTelemetryFromBackend(isAuto = false) {
         console.error(e);
         document.getElementById("execution-timestamp").innerText = "LINK TIMEOUT: Syncing...";
     } finally {
-        // 🌀 Clear overlay entirely once operation finishes
-        if (overlay) overlay.style.display = 'none';
+        // ⚡ INSTANT DISMISSAL: Force browser to hide overlay in the next animation frame
+        if (overlay) {
+            requestAnimationFrame(() => {
+                overlay.style.display = 'none';
+            });
+        }
     }
 }
 
